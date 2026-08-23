@@ -1,0 +1,4 @@
+AETHER SYSTEM SOFTWARE
+Kernel: Quartz
+Boot: El Torito no-emulation (CD-ROM)
+Storage: ISO 9660 via ATAPI PIO
