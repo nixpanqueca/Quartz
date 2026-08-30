@@ -1,0 +1,468 @@
+     1                                  ; Aether Boot Loader (El Torito no-emulation, CD-ROM)
+     2                                  ; Loaded by the BIOS at 0x0060:0000 (org 0x0600). DL = boot CD drive.
+     3                                  ;
+     4                                  ; Reads KERNEL.BIN from an ISO 9660 filesystem (PVD + root directory),
+     5                                  ; loads it at 0x8000, then sets up VBE/PCI/serial/PIC/GDT and switches
+     6                                  ; to protected mode.
+     7                                  
+     8                                  org 0x0600
+     9                                  bits 16
+    10                                  
+    11 00000000 EB02                        jmp short start
+    12 00000002 00                      BootDrive: db 0
+    13 00000003 00                      usbMode:   db 0
+    14                                  
+    15                                  start:
+    16 00000004 FA                          cli
+    17                                  
+    18 00000005 31C0                        xor ax, ax
+    19 00000007 8ED8                        mov ds, ax
+    20 00000009 8EC0                        mov es, ax
+    21 0000000B 8ED0                        mov ss, ax
+    22 0000000D 66BC00FC0900                mov esp, 0x9FC00
+    23 00000013 BC007C                      mov sp, 0x7C00
+    24                                  
+    25 00000016 8816[0200]                  mov [BootDrive], dl
+    26                                  
+    27                                      ; Detect USB boot: MBR writes 0xAB to [0x0500] before jumping here.
+    28                                      ; CD-ROM (El Torito) boot does not set this flag.
+    29 0000001A C606[0300]00                mov byte [usbMode], 0
+    30 0000001F 803E0005AB                  cmp byte [0x0500], 0xAB
+    31 00000024 7505                        jne .not_usb
+    32 00000026 C606[0300]AB                mov byte [usbMode], 0xAB
+    33                                  .not_usb:
+    34                                  
+    35 0000002B E81C02                      call serial_init
+    36 0000002E B053                        mov al, 'S'
+    37 00000030 E83A02                      call serial_putc
+    38                                  
+    39                                      ; ---------- ISO 9660: read the Primary Volume Descriptor ----------
+    40                                      ; PVD is at logical block 16. For a no-emulation CD-ROM drive the
+    41                                      ; int 13h AH=42h DAP LBA/count are already in 2048-byte blocks.
+    42 00000033 66B810000000                mov eax, 16
+    43 00000039 BB0030                      mov bx, 0x3000
+    44 0000003C E86301                      call read_cd
+    45 0000003F 0F824401                    jc cd_e1
+    46                                  
+    47                                      ; check "CD001" (strings live at CS; cmpsb uses DS:SI vs ES:DI)
+    48 00000043 BE0130                      mov si, 0x3001
+    49 00000046 06                          push es
+    50 00000047 8CC8                        mov ax, cs
+    51 00000049 8EC0                        mov es, ax
+    52 0000004B BF[A802]                    mov di, iso_sig
+    53 0000004E B90500                      mov cx, 5
+    54 00000051 F3A6                        repe cmpsb
+    55 00000053 07                          pop es
+    56 00000054 0F853301                    jne cd_e2
+    57                                  
+    58 00000058 B050                        mov al, 'P'
+    59 0000005A E81002                      call serial_putc
+    60                                  
+    61                                      ; Root directory record is at PVD+136; extent LBA (LE) at +138,
+    62                                      ; data length (LE) at +146.
+    63 0000005D 66A18A30                    mov eax, [0x3000 + 138]     ; root extent (2048-sector LBA)
+    64 00000061 BB0030                      mov bx, 0x3000              ; reuse buffer (root dir < 2048 bytes)
+    65 00000064 E83B01                      call read_cd
+    66 00000067 0F822401                    jc cd_e3
+    67                                  
+    68 0000006B B052                        mov al, 'R'
+    69 0000006D E8FD01                      call serial_putc
+    70                                  
+    71                                      ; ---------- scan root directory for KERNEL.BIN ----------
+    72 00000070 31DB                        xor bx, bx
+    73                                  .scan:
+    74 00000072 6631C0                      xor eax, eax
+    75 00000075 8A870030                    mov al, byte [0x3000 + bx]         ; directory record length
+    76 00000079 84C0                        test al, al
+    77 0000007B 0F841401                    jz cd_e4                           ; 0 = end of directory
+    78 0000007F 80BF20300B                  cmp byte [0x3000 + bx + 32], 11    ; name length must be >= "KERNEL.BIN;1"
+    79 00000084 7229                        jb .next
+    80 00000086 8DB72130                    lea si, [0x3000 + bx + 33]
+    81 0000008A 06                          push es
+    82 0000008B 8CC8                        mov ax, cs
+    83 0000008D 8EC0                        mov es, ax
+    84 0000008F BF[AD02]                    mov di, kernel_name
+    85 00000092 B90A00                      mov cx, 10
+    86 00000095 60                          pusha
+    87 00000096 F3A6                        repe cmpsb
+    88 00000098 61                          popa
+    89 00000099 07                          pop es
+    90 0000009A 7513                        jne .next
+    91 0000009C 80BF2B303B                  cmp byte [0x3000 + bx + 43], ';'   ; name[10] must be ';'
+    92 000000A1 750C                        jne .next
+    93                                  
+    94                                      ; found: extent (LE) at +2, data length (LE) at +10
+    95 000000A3 668B870230                  mov eax, [0x3000 + bx + 2]
+    96 000000A8 668B970A30                  mov edx, [0x3000 + bx + 10]
+    97 000000AD EB04                        jmp load_kernel
+    98                                  .next:
+    99 000000AF 01C3                        add bx, ax
+   100 000000B1 EBBF                        jmp .scan
+   101                                  
+   102                                      ; ---------- load kernel ----------
+   103                                      ; EAX = extent (2048-sector LBA), EDX = size in bytes.
+   104                                      ; NOTE: read_cd clobbers EDX (mov dl, [BootDrive] sets DL=0xE0),
+   105                                      ; so the sector count must live in EBP.
+   106                                  load_kernel:
+   107 000000B3 6681C2FF070000              add edx, 2047
+   108 000000BA 66C1EA0B                    shr edx, 11                     ; number of 2048-byte sectors
+   109 000000BE 6689D5                      mov ebp, edx
+   110 000000C1 06                          push es
+   111 000000C2 BB0080                      mov bx, 0x8000
+   112                                  .kl:
+   113 000000C5 6685ED                      test ebp, ebp
+   114 000000C8 741A                        jz .kl_done
+   115 000000CA E8D500                      call read_cd
+   116 000000CD 0F82C600                    jc cd_e5
+   117 000000D1 6640                        inc eax                         ; next 2048-block
+   118 000000D3 81C30008                    add bx, 2048
+   119 000000D7 7307                        jnc .kl_cont
+   120 000000D9 8CC0                        mov ax, es                      ; 64K wrap: bump segment
+   121 000000DB 050010                      add ax, 0x1000
+   122 000000DE 8EC0                        mov es, ax
+   123                                  .kl_cont:
+   124 000000E0 664D                        dec ebp
+   125 000000E2 EBE1                        jmp .kl
+   126                                  .kl_done:
+   127 000000E4 07                          pop es
+   128                                  
+   129 000000E5 B04B                        mov al, 'K'
+   130 000000E7 E88301                      call serial_putc
+   131                                  
+   132                                      ; ---------------- VBE: 640x480x32 (modo 0x112) linear framebuffer ----------------
+   133                                      ; Buffers do VBE em RAM: 0x5100 (info do modo)
+   134 000000EA B80005                      mov ax, 0x0500
+   135 000000ED 8EC0                        mov es, ax
+   136                                  
+   137                                      ; VBE: info do modo 0x0112 (640x480x32 true color)
+   138 000000EF B8014F                      mov ax, 0x4F01
+   139 000000F2 B91201                      mov cx, 0x0112
+   140 000000F5 BF0001                      mov di, 0x0100
+   141 000000F8 CD10                        int 0x10
+   142 000000FA 83F84F                      cmp ax, 0x004F
+   143 000000FD 754E                        jne video_error
+   144                                  
+   145                                      ; boot info em 0x1000: +0 = endereco do framebuffer (dword),
+   146                                      ;                      +4 = largura, +6 = altura, +8 = bytes por linha
+   147 000000FF B80005                      mov ax, 0x0500
+   148 00000102 8EC0                        mov es, ax
+   149 00000104 2666A12801                  mov eax, dword [es:0x0128]   ; PhysBasePtr (linear framebuffer)
+   150 00000109 66A30010                    mov [0x1000], eax
+   151 0000010D C70604108002                mov word [0x1004], 640
+   152 00000113 C7060610E001                mov word [0x1006], 480
+   153 00000119 26A11001                    mov ax, word [es:0x0110]     ; BytesPerScanLine (pitch)
+   154 0000011D 85C0                        test ax, ax
+   155 0000011F 7503                        jnz .pitch_ok
+   156 00000121 B8000A                      mov ax, 640 * 4              ; fallback: 640 px * 4 bytes
+   157                                  .pitch_ok:
+   158 00000124 A30810                      mov word [0x1008], ax
+   159                                  
+   160                                      ; Se a VGA for PCI (ex: qemu -vga std), o framebuffer real fica no BAR0
+   161                                      ; da placa, nao no endereco fixo reportado pelo VBE (0xE0000000).
+   162 00000127 E8B600                      call pci_find_vga_lfb
+   163                                  
+   164                                      ; debug serial: endereco final do framebuffer que sera usado
+   165 0000012A BE[B702]                    mov si, dbg_fb_msg
+   166 0000012D E84E01                      call serial_print_str
+   167 00000130 668B1E0010                  mov ebx, [0x1000]
+   168 00000135 E85601                      call serial_print_hex32
+   169 00000138 BE[BB02]                    mov si, dbg_crlf
+   170 0000013B E84001                      call serial_print_str
+   171                                  
+   172                                      ; VBE: ativa modo 0x0112 | bit 14 (linear framebuffer)
+   173 0000013E B8024F                      mov ax, 0x4F02
+   174 00000141 BB1241                      mov bx, 0x4112
+   175 00000144 CD10                        int 0x10
+   176 00000146 83F84F                      cmp ax, 0x004F
+   177 00000149 7502                        jne video_error
+   178                                  
+   179 0000014B EB20                        jmp video_done
+   180                                  
+   181                                  video_error:
+   182                                      ; fallback: VGA 320x200x256 (framebuffer linear em 0xA0000)
+   183 0000014D B81300                      mov ax, 0x0013
+   184 00000150 CD10                        int 0x10
+   185 00000152 66C706001000000A00          mov dword [0x1000], 0xA0000
+   186 0000015B C70604104001                mov word [0x1004], 320
+   187 00000161 C7060610C800                mov word [0x1006], 200
+   188 00000167 C70608104001                mov word [0x1008], 320
+   189                                  
+   190                                  video_done:
+   191                                  
+   192                                      ; mask all PIC IRQs NOW (real mode, before PM switch):
+   193                                      ; the kernel has no IDT, so no interrupt may fire after this point.
+   194 0000016D B0FF                        mov al, 0xFF
+   195 0000016F E6A1                        out 0xA1, al   ; slave PIC (IRQ8-15)
+   196 00000171 E621                        out 0x21, al   ; master PIC (IRQ0-7)
+   197                                  
+   198                                      ; Loads GDT
+   199 00000173 0F0116[D602]                lgdt [gdt_descriptor]
+   200                                  
+   201                                      ; Protected Mode
+   202 00000178 0F20C0                      mov eax, cr0
+   203 0000017B 6683C801                    or eax, 1
+   204 0000017F 0F22C0                      mov cr0, eax
+   205                                  
+   206                                      ; 32 bits code
+   207 00000182 EA[EC02]0800                jmp CODE_SEG:protected_mode
+   208                                  
+   209                                  cd_e1:
+   210 00000187 B031                        mov al, '1'
+   211 00000189 EB10                        jmp cd_error
+   212                                  cd_e2:
+   213 0000018B B032                        mov al, '2'
+   214 0000018D EB0C                        jmp cd_error
+   215                                  cd_e3:
+   216 0000018F B033                        mov al, '3'
+   217 00000191 EB08                        jmp cd_error
+   218                                  cd_e4:
+   219 00000193 B034                        mov al, '4'
+   220 00000195 EB04                        jmp cd_error
+   221                                  cd_e5:
+   222 00000197 B035                        mov al, '5'
+   223 00000199 EB00                        jmp cd_error
+   224                                  
+   225                                  cd_error:
+   226 0000019B E8CF00                      call serial_putc
+   227 0000019E FA                          cli
+   228 0000019F F4                          hlt
+   229 000001A0 EBF9                        jmp cd_error
+   230                                  
+   231                                  ; -------------------------
+   232                                  ; Read one 2048-byte logical block via int 13h AH=42h.
+   233                                  ; Converts the 2048-byte LBA to 512-byte LBA (×4) and reads 4 sectors.
+   234                                  ; in: EAX = logical block (2048 bytes), ES:BX = destination buffer
+   235                                  ; out: CF set on error, EAX preserved
+   236                                  ; -------------------------
+   237                                  read_cd:
+   238 000001A2 6650                        push eax
+   239 000001A4 803E[0300]AB                cmp byte [usbMode], 0xAB
+   240 000001A9 750C                        jne .cdrom_mode
+   241                                      ; USB mode: sector = 512 bytes, LBA ×4, count = 4
+   242 000001AB 66C1E002                    shl eax, 2
+   243 000001AF C706[DE02]0400              mov word [dap_cnt], 4
+   244 000001B5 EB06                        jmp .do_read
+   245                                  .cdrom_mode:
+   246                                      ; CD-ROM mode: sector = 2048 bytes, LBA as-is, count = 1
+   247 000001B7 C706[DE02]0100              mov word [dap_cnt], 1
+   248                                  .do_read:
+   249 000001BD 891E[E002]                  mov word [dap_off], bx
+   250 000001C1 8C06[E202]                  mov word [dap_seg], es
+   251 000001C5 66A3[E402]                  mov dword [dap_lba], eax
+   252 000001C9 66C706[E802]000000-         mov dword [dap_lba + 4], 0
+   252 000001D1 00                 
+   253 000001D2 BE[DC02]                    mov si, dap
+   254 000001D5 8A16[0200]                  mov dl, [BootDrive]
+   255 000001D9 B442                        mov ah, 0x42
+   256 000001DB CD13                        int 0x13
+   257 000001DD 6658                        pop eax
+   258 000001DF C3                          ret
+   259                                  
+   260                                  ; -------------------------
+   261                                  ; PCI: acha o framebuffer da VGA
+   262                                  ; Varre o barramento 0 procurando um display controller (classe 0x03)
+   263                                  ; e usa o BAR0. Se achar, sobrescreve o boot info em 0x1000.
+   264                                  ; -------------------------
+   265                                  
+   266                                  pci_find_vga_lfb:
+   267 000001E0 6660                        pushad
+   268 000001E2 31FF                        xor di, di          ; dispositivo 0..31
+   269                                  
+   270                                  .pci_loop:
+   271 000001E4 66BB00000080                mov ebx, 0x80000000
+   272 000001EA 660FB7CF                    movzx ecx, di
+   273 000001EE 66C1E10B                    shl ecx, 11         ; (bus 0 | func 0 | reg 0) + dev << 11
+   274 000001F2 6609CB                      or  ebx, ecx
+   275 000001F5 BAF80C                      mov dx, 0xCF8
+   276 000001F8 6689D8                      mov eax, ebx
+   277 000001FB 66EF                        out dx, eax
+   278 000001FD BAFC0C                      mov dx, 0xCFC
+   279 00000200 66ED                        in  eax, dx
+   280 00000202 6683F8FF                    cmp eax, 0xFFFFFFFF
+   281 00000206 7439                        je  .pci_next       ; nenhum device aqui
+   282                                  
+   283                                      ; classe base = reg 0x08, bits 31..24
+   284 00000208 6689D8                      mov eax, ebx
+   285 0000020B 6683C808                    or  eax, 0x08
+   286 0000020F BAF80C                      mov dx, 0xCF8
+   287 00000212 66EF                        out dx, eax
+   288 00000214 BAFC0C                      mov dx, 0xCFC
+   289 00000217 66ED                        in  eax, dx
+   290 00000219 66C1E818                    shr eax, 24
+   291 0000021D 3C03                        cmp al, 0x03        ; display controller?
+   292 0000021F 7520                        jne .pci_next
+   293                                  
+   294                                      ; BAR0 = reg 0x10 (endereco do framebuffer)
+   295 00000221 6689D8                      mov eax, ebx
+   296 00000224 6683C810                    or  eax, 0x10
+   297 00000228 BAF80C                      mov dx, 0xCF8
+   298 0000022B 66EF                        out dx, eax
+   299 0000022D BAFC0C                      mov dx, 0xCFC
+   300 00000230 66ED                        in  eax, dx
+   301 00000232 6683E0F0                    and eax, 0xFFFFFFF0
+   302 00000236 6685C0                      test eax, eax
+   303 00000239 7406                        jz  .pci_next
+   304 0000023B 66A30010                    mov [0x1000], eax   ; framebuffer real encontrado
+   305 0000023F EB06                        jmp .pci_done
+   306                                  
+   307                                  .pci_next:
+   308 00000241 47                          inc di
+   309 00000242 83FF20                      cmp di, 32
+   310 00000245 729D                        jb .pci_loop
+   311                                  
+   312                                  .pci_done:
+   313 00000247 6661                        popad
+   314 00000249 C3                          ret
+   315                                  
+   316                                  ; -------------------------
+   317                                  ; Serial (COM1) - debug
+   318                                  ; -------------------------
+   319                                  
+   320                                  serial_init:
+   321 0000024A 50                          push ax
+   322 0000024B 52                          push dx
+   323 0000024C BAF903                      mov dx, 0x3F9
+   324 0000024F B000                        mov al, 0x00
+   325 00000251 EE                          out dx, al          ; sem interrupcoes
+   326 00000252 BAFB03                      mov dx, 0x3FB
+   327 00000255 B080                        mov al, 0x80
+   328 00000257 EE                          out dx, al          ; DLAB = 1
+   329 00000258 BAF803                      mov dx, 0x3F8
+   330 0000025B B003                        mov al, 0x03
+   331 0000025D EE                          out dx, al          ; divisor baixo (38400)
+   332 0000025E BAF903                      mov dx, 0x3F9
+   333 00000261 B000                        mov al, 0x00
+   334 00000263 EE                          out dx, al          ; divisor alto
+   335 00000264 BAFB03                      mov dx, 0x3FB
+   336 00000267 B003                        mov al, 0x03
+   337 00000269 EE                          out dx, al          ; 8N1, DLAB = 0
+   338 0000026A 5A                          pop dx
+   339 0000026B 58                          pop ax
+   340 0000026C C3                          ret
+   341                                  
+   342                                  ; in: AL = caracter
+   343                                  serial_putc:
+   344 0000026D 88C4                        mov ah, al
+   345                                  .serial_wait:
+   346 0000026F BAFD03                      mov dx, 0x3FD
+   347 00000272 EC                          in al, dx
+   348 00000273 A820                        test al, 0x20
+   349 00000275 74F8                        jz .serial_wait
+   350 00000277 88E0                        mov al, ah
+   351 00000279 BAF803                      mov dx, 0x3F8
+   352 0000027C EE                          out dx, al
+   353 0000027D C3                          ret
+   354                                  
+   355                                  ; in: SI = string terminada em 0 (no segmento CS)
+   356                                  serial_print_str:
+   357 0000027E 50                          push ax
+   358 0000027F 56                          push si
+   359                                  .serial_str_loop:
+   360 00000280 2EAC                        cs lodsb
+   361 00000282 84C0                        test al, al
+   362 00000284 7405                        jz .serial_str_done
+   363 00000286 E8E4FF                      call serial_putc
+   364 00000289 EBF5                        jmp .serial_str_loop
+   365                                  .serial_str_done:
+   366 0000028B 5E                          pop si
+   367 0000028C 58                          pop ax
+   368 0000028D C3                          ret
+   369                                  
+   370                                  ; in: EBX = valor a imprimir (hex)
+   371                                  serial_print_hex32:
+   372 0000028E B90800                      mov cx, 8
+   373                                  .serial_hex_loop:
+   374 00000291 66C1C304                    rol ebx, 4
+   375 00000295 88D8                        mov al, bl
+   376 00000297 240F                        and al, 0x0F
+   377 00000299 0430                        add al, '0'
+   378 0000029B 3C39                        cmp al, '9'
+   379 0000029D 7602                        jbe .serial_hex_digit
+   380 0000029F 0407                        add al, 7
+   381                                  .serial_hex_digit:
+   382 000002A1 E8C9FF                      call serial_putc
+   383 000002A4 49                          dec cx
+   384 000002A5 75EA                        jnz .serial_hex_loop
+   385 000002A7 C3                          ret
+   386                                  
+   387 000002A8 4344303031              iso_sig:     db 'CD001'
+   388 000002AD 4B45524E454C2E4249-     kernel_name: db 'KERNEL.BIN'
+   388 000002B6 4E                 
+   389 000002B7 46423D00                dbg_fb_msg:  db 'FB=', 0
+   390 000002BB 0D0A00                  dbg_crlf:    db 13, 10, 0
+   391                                  
+   392                                  ; -------------------------
+   393                                  ; GDT
+   394                                  ; -------------------------
+   395                                  
+   396                                  gdt_start:
+   397                                  
+   398                                  gdt_null:
+   399 000002BE 0000000000000000            dq 0
+   400                                  
+   401                                  gdt_code:
+   402 000002C6 FFFF                        dw 0xffff
+   403 000002C8 0000                        dw 0x0000
+   404 000002CA 00                          db 0x00
+   405 000002CB 9A                          db 10011010b
+   406 000002CC CF                          db 11001111b
+   407 000002CD 00                          db 0x00
+   408                                  
+   409                                  gdt_data:
+   410 000002CE FFFF                        dw 0xffff
+   411 000002D0 0000                        dw 0x0000
+   412 000002D2 00                          db 0x00
+   413 000002D3 92                          db 10010010b
+   414 000002D4 CF                          db 11001111b
+   415 000002D5 00                          db 0x00
+   416                                  
+   417                                  gdt_end:
+   418                                  
+   419                                  gdt_descriptor:
+   420 000002D6 1700                        dw gdt_end - gdt_start - 1
+   421 000002D8 [BE020000]                  dd gdt_start
+   422                                  
+   423                                  CODE_SEG equ gdt_code - gdt_start
+   424                                  DATA_SEG equ gdt_data - gdt_start
+   425                                  
+   426                                  ; -------------------------
+   427                                  ; Disk Address Packet (int 13h AH=42h). LBA and count are in
+   428                                  ; 512-byte logical blocks (USB). read_cd sets count=4 before each use.
+   429                                  ; -------------------------
+   430                                  
+   431                                  dap:
+   432 000002DC 10                          db 16            ; packet size
+   433 000002DD 00                          db 0
+   434                                  dap_cnt:
+   435 000002DE 0400                        dw 4             ; count = 4 × 512 = 2048 bytes
+   436                                  dap_off:
+   437 000002E0 0000                        dw 0
+   438                                  dap_seg:
+   439 000002E2 0000                        dw 0
+   440                                  dap_lba:
+   441 000002E4 0000000000000000            dq 0
+   442                                  
+   443                                  ; -------------------------
+   444                                  ; Protected Mode
+   445                                  ; -------------------------
+   446                                  
+   447                                  bits 32
+   448                                  
+   449                                  protected_mode:
+   450 000002EC 66B81000                    mov ax, DATA_SEG
+   451 000002F0 8ED8                        mov ds, ax
+   452 000002F2 8EC0                        mov es, ax
+   453 000002F4 8ED0                        mov ss, ax
+   454                                  
+   455                                      ; calls startup.asm
+   456                                  
+   457 000002F6 EA008000000800              jmp CODE_SEG:0x8000
+   458                                  
+   459                                  hang:
+   460 000002FD FA                          cli
+   461 000002FE F4                          hlt
+   462 000002FF EBFC                        jmp hang
+   463                                  
+   464                                  ; El Torito no-emulation: no 0xAA55 signature is checked and the boot
+   465                                  ; image may exceed 512 bytes. Pad to a full 2048-byte sector.
+   466 00000301 00<rep 4FFh>            times 2048-($-$$) db 0

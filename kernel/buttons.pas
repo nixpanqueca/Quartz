@@ -3,6 +3,7 @@ unit Buttons;
 {$mode objfpc}
 {$H-}
 {$rtti off}
+{$asmmode intel}
 
 interface
 
@@ -14,6 +15,18 @@ const
 // Torna uma area (X, Y, W, H) clicavel. OnClick = endereco da funcao
 // (passe @MinhaProc ou nil). Retorna o indice do botao (-1 se cheio).
 function AddButton(X, Y, W, H: Integer; OnClick: Pointer): Integer;
+
+// Como AddButton, mas tambem recebe um OnDblClick (chamado quando o mesmo
+// botao e clicado duas vezes rapidamente). Passe @Proc ou nil.
+function AddButtonEx(X, Y, W, H: Integer; OnClick, OnDblClick: Pointer): Integer;
+
+// Indice do ultimo botao atingido pelo clique (ou -1 se clicou fora de
+// qualque botao). Usado dentro dos OnClick/OnDblClick para saber qual
+// elemento foi acionado.
+function GetLastHit: Integer;
+
+// Retorna (e limpa) se o ultimo clique foi fora de qualquer botao.
+function GetOutsideClick: Boolean;
 
 // Remove um botao pelo indice retornado pelo AddButton/CreateButton.
 procedure RemoveButton(Index: Integer);
@@ -39,16 +52,62 @@ implementation
 
 type
   TButtonProc = procedure;
+  TButtonDblProc = procedure;
 
   TButton = record
     X, Y, W, H: Integer;
     OnClick: Pointer;
+    OnDblClick: Pointer;
   end;
 
 var
   ButtonList: array[0..MaxButtons - 1] of TButton;
   ButtonCount: Integer;
   PrevButtons: Byte;
+  LastHit: Integer;
+  PrevHit: Integer;
+  PrevHitSec: Integer;
+  OutsideHit: Boolean;
+
+procedure OutB(Addr: Word; Value: Byte);
+begin
+  asm
+    mov dx, Addr
+    mov al, Value
+    out dx, al
+  end;
+end;
+
+function InB(Addr: Word): Byte;
+var
+  B: Byte;
+begin
+  asm
+    mov dx, Addr
+    in al, dx
+    mov B, al
+  end;
+  InB := B;
+end;
+
+// Segundos monotonicos do RTC (horas*3600 + min*60 + seg). Usado para
+// medir o intervalo entre cliques (double-click) sem precisar de IRQ.
+function RTCMonotonic: Integer;
+var
+  H, M, S: Byte;
+  HH, MM, SS: Integer;
+begin
+  OutB($70, $04);
+  H := InB($71);
+  OutB($70, $02);
+  M := InB($71);
+  OutB($70, $00);
+  S := InB($71);
+  HH := (H shr 4) * 10 + (H and $0F);
+  MM := (M shr 4) * 10 + (M and $0F);
+  SS := (S shr 4) * 10 + (S and $0F);
+  Result := HH * 3600 + MM * 60 + SS;
+end;
 
 function StrLen(S: PChar): Integer;
 begin
@@ -79,7 +138,7 @@ begin
   Result := True;
 end;
 
-function AddButton(X, Y, W, H: Integer; OnClick: Pointer): Integer;
+function AddButtonEx(X, Y, W, H: Integer; OnClick, OnDblClick: Pointer): Integer;
 begin
   if ButtonCount >= MaxButtons then
     Exit(-1);
@@ -88,8 +147,25 @@ begin
   ButtonList[ButtonCount].W := W;
   ButtonList[ButtonCount].H := H;
   ButtonList[ButtonCount].OnClick := OnClick;
+  ButtonList[ButtonCount].OnDblClick := OnDblClick;
   Result := ButtonCount;
   Inc(ButtonCount);
+end;
+
+function AddButton(X, Y, W, H: Integer; OnClick: Pointer): Integer;
+begin
+  Result := AddButtonEx(X, Y, W, H, OnClick, nil);
+end;
+
+function GetLastHit: Integer;
+begin
+  Result := LastHit;
+end;
+
+function GetOutsideClick: Boolean;
+begin
+  Result := OutsideHit;
+  OutsideHit := False;
 end;
 
 procedure RemoveButton(Index: Integer);
@@ -137,8 +213,9 @@ end;
 
 procedure CheckButtons;
 var
-  B, i, MX, MY: Integer;
+  B, i, MX, MY, NowSec: Integer;
   P: TButtonProc;
+  D: TButtonDblProc;
 begin
   B := GetMouseButtons;
   if (B and 1) <> 0 then
@@ -146,17 +223,49 @@ begin
     begin
       MX := GetMouseX;
       MY := GetMouseY;
+      LastHit := -1;
       for i := 0 to ButtonCount - 1 do
         if (MX >= ButtonList[i].X) and (MX < ButtonList[i].X + ButtonList[i].W) and
            (MY >= ButtonList[i].Y) and (MY < ButtonList[i].Y + ButtonList[i].H) then
         begin
-          if ButtonList[i].OnClick <> nil then
-          begin
-            P := TButtonProc(ButtonList[i].OnClick);
-            P;
-          end;
+          LastHit := i;
           Break;
         end;
+
+      if LastHit >= 0 then
+      begin
+        NowSec := RTCMonotonic;
+        if (LastHit = PrevHit) and (PrevHitSec >= 0) and
+           (NowSec - PrevHitSec <= 1) then
+        begin
+          // Double-click no mesmo botao: chama OnDblClick (ignora OnClick).
+          PrevHit := -1;
+          PrevHitSec := -1;
+          if ButtonList[LastHit].OnDblClick <> nil then
+          begin
+            D := TButtonDblProc(ButtonList[LastHit].OnDblClick);
+            D;
+          end;
+        end
+        else
+        begin
+          // Clique simples: seleciona/aciona e registra o instante.
+          PrevHit := LastHit;
+          PrevHitSec := NowSec;
+          if ButtonList[LastHit].OnClick <> nil then
+          begin
+            P := TButtonProc(ButtonList[LastHit].OnClick);
+            P;
+          end;
+        end;
+      end
+      else
+      begin
+        // Clique fora de qualquer botao: cancela selecao pendente de double.
+        PrevHit := -1;
+        PrevHitSec := -1;
+        OutsideHit := True;
+      end;
     end;
   PrevButtons := B;
 end;

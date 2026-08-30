@@ -10,6 +10,7 @@ uses Video;
 
 procedure MouseInit;
 procedure MousePoll;
+procedure MouseDeliver(B: Byte);
 function GetMouseX: Integer;
 function GetMouseY: Integer;
 function GetMouseButtons: Byte;
@@ -83,6 +84,42 @@ begin
   InB(PortData);                // descarta o ACK (0xFA)
 end;
 
+procedure MouseDeliver(B: Byte);
+begin
+  case PacketPos of
+    0: Packet[0] := B;
+    1: Packet[1] := B;
+    2:
+    begin
+      Packet[2] := B;
+      if (Packet[0] and $40) = 0 then
+      begin
+        if (Packet[0] and $10) <> 0 then
+          MouseX := MouseX + (Packet[1] - 256)
+        else
+          MouseX := MouseX + Packet[1];
+      end;
+      if (Packet[0] and $80) = 0 then
+      begin
+        if (Packet[0] and $20) <> 0 then
+          MouseY := MouseY - (Packet[2] - 256)
+        else
+          MouseY := MouseY - Packet[2];
+      end;
+      MouseButtons := Packet[0] and $03;
+      if MouseX < 0 then
+        MouseX := 0
+      else if MouseX > RWidth - 16 then
+        MouseX := RWidth - 16;
+      if MouseY < 0 then
+        MouseY := 0
+      else if MouseY > RHeight - 16 then
+        MouseY := RHeight - 16;
+    end;
+  end;
+  PacketPos := (PacketPos + 1) mod 3;
+end;
+
 procedure MousePoll;
 var
   Status, B: Byte;
@@ -93,38 +130,7 @@ begin
     if (Status and $21) <> $21 then
       Exit;
     B := InB(PortData);
-    case PacketPos of
-      0: Packet[0] := B;
-      1: Packet[1] := B;
-      2:
-      begin
-        Packet[2] := B;
-        if (Packet[0] and $40) = 0 then
-        begin
-          if (Packet[0] and $10) <> 0 then
-            MouseX := MouseX + (Packet[1] - 256)
-          else
-            MouseX := MouseX + Packet[1];
-        end;
-        if (Packet[0] and $80) = 0 then
-        begin
-          if (Packet[0] and $20) <> 0 then
-            MouseY := MouseY - (Packet[2] - 256)
-          else
-            MouseY := MouseY - Packet[2];
-        end;
-        MouseButtons := Packet[0] and $03;
-        if MouseX < 0 then
-          MouseX := 0
-        else if MouseX > RWidth - 16 then
-          MouseX := RWidth - 16;
-        if MouseY < 0 then
-          MouseY := 0
-        else if MouseY > RHeight - 16 then
-          MouseY := RHeight - 16;
-      end;
-    end;
-    PacketPos := (PacketPos + 1) mod 3;
+    MouseDeliver(B);
   end;
 end;
 

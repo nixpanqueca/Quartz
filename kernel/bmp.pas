@@ -36,6 +36,10 @@ begin
               (LongWord((P + 2)^) shl 16) or (LongWord((P + 3)^) shl 24);
 end;
 
+// Decodifica um arquivo BMP (8/24/32 bpp, sem compressao) para um buffer
+// de pixels true color. Cada pixel no Dst ocupa 4 bytes no formato
+// [R][G][B][A] (bytes na ordem do framebuffer); A = 0 significa
+// transparente (pixel vermelho puro 255,0,0 na origem).
 function BMPDecode(Src: PByte; SrcSize: LongWord;
   var W, H: Integer; Dst: PByte; MaxPixels: LongWord): Boolean;
 var
@@ -103,7 +107,8 @@ begin
   begin
     if IsTopDown then DstRow := Y
     else DstRow := H - 1 - Y;
-    DstPtr := PByte(PByte(Dst) + DstRow * W);
+    DstPtr := Dst;
+    Inc(DstPtr, DstRow * W * 4);
     SrcPtr := PByte(PByte(Src) + ImgOff + LongWord(Y) * LongWord(RowBytes));
     for X := 0 to W - 1 do
     begin
@@ -113,16 +118,13 @@ begin
         B := PalEntry^; Inc(PalEntry);
         G := PalEntry^; Inc(PalEntry);
         R := PalEntry^;
-        if (R = 255) and (G = 0) and (B = 0) then DstPtr^ := 0
-        else DstPtr^ := RGBToVGA(R, G, B);
+        Inc(SrcPtr);
       end
       else if Bpp = 24 then
       begin
         B := SrcPtr^; Inc(SrcPtr);
         G := SrcPtr^; Inc(SrcPtr);
         R := SrcPtr^; Inc(SrcPtr);
-        if (R = 255) and (G = 0) and (B = 0) then DstPtr^ := 0
-        else DstPtr^ := RGBToVGA(R, G, B);
       end
       else
       begin
@@ -130,10 +132,13 @@ begin
         G := SrcPtr^; Inc(SrcPtr);
         R := SrcPtr^; Inc(SrcPtr);
         Inc(SrcPtr);
-        if (R = 255) and (G = 0) and (B = 0) then DstPtr^ := 0
-        else DstPtr^ := RGBToVGA(R, G, B);
       end;
-      Inc(DstPtr);
+      if (R = 255) and (G = 0) and (B = 0) then
+        PLongWord(DstPtr)^ := $00000000   // transparente
+      else
+        PLongWord(DstPtr)^ := $FF000000 or LongWord(R) or
+                              (LongWord(G) shl 8) or (LongWord(B) shl 16);
+      Inc(DstPtr, 4);
       Inc(PixIdx);
     end;
     Inc(SrcPtr, Pad);

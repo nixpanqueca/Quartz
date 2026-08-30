@@ -11,6 +11,7 @@ interface
 procedure CDInit;
 function CDReadSector(LBA: LongWord; Buf: PByte): Boolean;
 function FSReadFile(Name: PChar; Dest: PByte; MaxSize: LongWord): LongInt;
+function FSListDir(Name: PChar; Dest: PByte; MaxBytes: Integer): Integer;
 procedure CDSelfTest;
 
 implementation
@@ -284,6 +285,101 @@ begin
       Exit;
     end;
   end;
+end;
+
+// Lista os arquivos (nao-diretorios) de um diretorio. Grava em Dest os
+// nomes em minusculas/como estao, um apos o outro, cada um terminado em #0.
+// Retorna a quantidade de arquivos listados (0 se nao achar o diretorio).
+function FSListDir(Name: PChar; Dest: PByte; MaxBytes: Integer): Integer;
+var
+  RootLBA, RootSize: LongWord;
+  DirLBA, DirSize: LongWord;
+  FileLBA, FileSize: LongWord;
+  IsDir: Boolean;
+  Components: array[0..7] of PChar;
+  NumComp, I, J, N, Len: Integer;
+  P: PChar;
+  NameBuf: array[0..63] of Char;
+  SecCount, S, OutPoz: LongWord;
+  Count, ObjLen, NameLen: Integer;
+begin
+  FSListDir := 0;
+  if CDBase = 0 then Exit;
+  if not CDReadSector(16, @PVD[0]) then Exit;
+  if PVD[1] <> $43 then Exit;
+  if PVD[2] <> $44 then Exit;
+  if PVD[3] <> $30 then Exit;
+  if PVD[4] <> $30 then Exit;
+  if PVD[5] <> $31 then Exit;
+  RootLBA := LongWord(PVD[138]) or (LongWord(PVD[139]) shl 8) or
+             (LongWord(PVD[140]) shl 16) or (LongWord(PVD[141]) shl 24);
+  RootSize := LongWord(PVD[146]) or (LongWord(PVD[147]) shl 8) or
+              (LongWord(PVD[148]) shl 16) or (LongWord(PVD[149]) shl 24);
+  Len := 0;
+  while (Name[Len] <> #0) and (Len < 63) do
+  begin
+    NameBuf[Len] := Name[Len];
+    Inc(Len);
+  end;
+  NameBuf[Len] := #0;
+  NumComp := 0;
+  P := @NameBuf[0];
+  while (P^ <> #0) and (NumComp < 8) do
+  begin
+    Components[NumComp] := P;
+    Inc(NumComp);
+    while (P^ <> #0) and (P^ <> '\') and (P^ <> '/') do Inc(P);
+    if P^ <> #0 then begin P^ := #0; Inc(P); end;
+  end;
+  if NumComp = 0 then Exit;
+  DirLBA := RootLBA;
+  DirSize := RootSize;
+  for I := 0 to NumComp - 1 do
+  begin
+    FSLookup(DirLBA, DirSize, Components[I], FileLBA, FileSize, IsDir);
+    if FileLBA = 0 then Exit;
+    if I < NumComp - 1 then
+    begin
+      if not IsDir then Exit;
+      DirLBA := FileLBA;
+      DirSize := FileSize;
+    end
+    else
+    begin
+      if not IsDir then Exit;
+      DirLBA := FileLBA;
+      DirSize := FileSize;
+    end;
+  end;
+  Count := 0;
+  OutPoz := 0;
+  SecCount := (DirSize + 2047) div 2048;
+  if SecCount > 16 then SecCount := 16;
+  for S := 0 to SecCount - 1 do
+  begin
+    if not CDReadSector(DirLBA + S, @DirBuf[0]) then Exit;
+    N := 0;
+    while N < 2048 do
+    begin
+      ObjLen := DirBuf[N];
+      if ObjLen = 0 then Break;
+      NameLen := DirBuf[N + 32];
+      IsDir := (DirBuf[N + 25] and 2) <> 0;
+      if (not IsDir) and (NameLen > 0) then
+      begin
+        if OutPoz + LongWord(NameLen) + 1 <= LongWord(MaxBytes) then
+        begin
+          for J := 0 to NameLen - 1 do
+            Dest[OutPoz + LongWord(J)] := DirBuf[N + 33 + J];
+          Dest[OutPoz + LongWord(NameLen)] := 0;
+          OutPoz := OutPoz + LongWord(NameLen) + 1;
+          Inc(Count);
+        end;
+      end;
+      N := N + ObjLen;
+    end;
+  end;
+  FSListDir := Count;
 end;
 
 procedure CDSelfTest;

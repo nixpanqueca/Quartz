@@ -3,7 +3,7 @@ param(
 )
 
 # Builds a minimal ISO 9660 image with an El Torito no-emulation boot
-# image, plus KERNEL.BIN, ABOUT.TXT and the assets tree (assets\ -> ISO
+# image, plus KERNEL.BIN, ABOUT.TXT and the disk tree (disk\ -> ISO
 # root), without relying on external ISO tools.
 #
 # Logical block size = 2048 bytes. Layout:
@@ -35,7 +35,7 @@ $ErrorActionPreference = 'Stop'
 $BootBin = Join-Path $RootDir 'build\boot.bin'
 $Kernel  = Join-Path $RootDir 'build\quartz.flat'
 $AboutTxt = Join-Path $RootDir 'about.txt'
-$AssetsDir = Join-Path $RootDir 'assets'
+$DiskDir = Join-Path $RootDir 'disk'
 $OutIso  = Join-Path $RootDir 'build\AetherSystemSoftware.iso'
 
 if (-not (Test-Path $BootBin)) { throw "boot.bin nao encontrado: $BootBin" }
@@ -112,8 +112,8 @@ $aboutLBA = 27 + [int][Math]::Ceiling($kernel.Length / 2048)
 $root.Entries.Add(@{ Name = 'ABOUT.TXT'; IsDir = $false; Bytes = $aboutBytes; Sub = $null;
     LBA = $aboutLBA; Size = $aboutBytes.Length; Sectors = [int][Math]::Ceiling($aboutBytes.Length / 2048) }) | Out-Null
 
-if (Test-Path $AssetsDir) {
-    foreach ($e in (Collect-Dir $AssetsDir).Entries) {
+if (Test-Path $DiskDir) {
+    foreach ($e in (Collect-Dir $DiskDir).Entries) {
         $root.Entries.Add($e) | Out-Null
     }
 }
@@ -385,7 +385,7 @@ $blocks.Add(@{ LBA = 24; Data = $pt }) | Out-Null
 $blocks.Add(@{ LBA = 25; Data = $ptm }) | Out-Null
 $blocks.Add(@{ LBA = 26; Data = $rootDirBytes }) | Out-Null
 
-# kernel/about/assets files e subdiretorios: escritos abaixo em DFS
+# kernel/about/disk files e subdiretorios: escritos abaixo em DFS
 # (mesma ordem da alocacao de LBA).
 function Add-DirBlocks($d) {
     foreach ($e in $d.Entries) {
@@ -405,7 +405,7 @@ function Add-DirBlocks($d) {
 }
 Add-DirBlocks $root
 
-# arquivos de assets (DFS)
+# arquivos de disk (DFS)
 function Add-FileBlocks($d) {
     foreach ($e in $d.Entries) {
         if ($e.IsDir) { Add-FileBlocks $e.Sub }
@@ -444,15 +444,15 @@ try {
 }
 
 $isoLen = (Get-Item $TmpIso).Length
-$assetCount = 0
+$diskCount = 0
 $dirCount = 0
-function Count-Assets($d) {
+function Count-Disk($d) {
     foreach ($e in $d.Entries) {
-        if ($e.IsDir) { $script:dirCount += 1; Count-Assets $e.Sub }
-        else { $script:assetCount += 1 }
+        if ($e.IsDir) { $script:dirCount += 1; Count-Disk $e.Sub }
+        else { $script:diskCount += 1 }
     }
 }
-Count-Assets $root
+Count-Disk $root
 
 # --- isohybrid MBR for USB boot support ---
 $MbrBin = Join-Path $RootDir 'build\mbr.bin'
@@ -468,4 +468,4 @@ if (Test-Path $MbrBin) {
 if (Test-Path $OutIso) { Remove-Item $OutIso -Force }
 Rename-Item $TmpIso $OutIso
 Write-Output "make_iso: ISO criado em $OutIso"
-Write-Output "make_iso: kernel=$($kernel.Length) bytes, about=$($aboutBytes.Length) bytes, assets=$assetCount arquivos, $dirCount subdiretorios, iso=$isoLen bytes ($totalSectors setores de 2048)"
+Write-Output "make_iso: kernel=$($kernel.Length) bytes, about=$($aboutBytes.Length) bytes, disk=$diskCount arquivos, $dirCount subdiretorios, iso=$isoLen bytes ($totalSectors setores de 2048)"

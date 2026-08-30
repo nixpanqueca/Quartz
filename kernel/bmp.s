@@ -126,7 +126,7 @@ BMP_$$_READLE32$PBYTE$$LONGWORD:
 	.balign 16,0x90
 .globl	BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN
 BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
-# [52] begin
+# [56] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-92(%esp),%esp
@@ -161,15 +161,15 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movl	%ecx,-12(%ebp)
-# [53] BMPDecode := False;
+# [57] BMPDecode := False;
 	movb	$0,-16(%ebp)
-# [54] W := 0;
+# [58] W := 0;
 	movl	-12(%ebp),%eax
 	movl	$0,(%eax)
-# [55] H := 0;
+# [59] H := 0;
 	movl	16(%ebp),%eax
 	movl	$0,(%eax)
-# [56] if SrcSize < 54 then Exit;
+# [60] if SrcSize < 54 then Exit;
 	cmpl	$54,-8(%ebp)
 	jb	.Lj11
 	jmp	.Lj12
@@ -177,7 +177,7 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj12:
-# [57] if Src[0] <> $42 then Exit;
+# [61] if Src[0] <> $42 then Exit;
 	movl	-4(%ebp),%eax
 	cmpb	$66,(%eax)
 	jne	.Lj13
@@ -186,7 +186,7 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj14:
-# [58] if Src[1] <> $4D then Exit;
+# [62] if Src[1] <> $4D then Exit;
 	movl	-4(%ebp),%eax
 	cmpb	$77,1(%eax)
 	jne	.Lj15
@@ -195,48 +195,48 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj16:
-# [59] ImgOff := ReadLE32(Src + 10);
+# [63] ImgOff := ReadLE32(Src + 10);
 	movl	-4(%ebp),%eax
 	leal	10(%eax),%eax
 	call	BMP_$$_READLE32$PBYTE$$LONGWORD
 	movl	%eax,-24(%ebp)
-# [60] HdrSize := ReadLE32(Src + 14);
+# [64] HdrSize := ReadLE32(Src + 14);
 	movl	-4(%ebp),%eax
 	leal	14(%eax),%eax
 	call	BMP_$$_READLE32$PBYTE$$LONGWORD
 	movl	%eax,-20(%ebp)
-# [61] W := LongInt(ReadLE32(Src + 18));
+# [65] W := LongInt(ReadLE32(Src + 18));
 	movl	-4(%ebp),%eax
 	leal	18(%eax),%eax
 	call	BMP_$$_READLE32$PBYTE$$LONGWORD
 	movl	-12(%ebp),%edx
 	movl	%eax,(%edx)
-# [62] H := LongInt(ReadLE32(Src + 22));
+# [66] H := LongInt(ReadLE32(Src + 22));
 	movl	-4(%ebp),%eax
 	leal	22(%eax),%eax
 	call	BMP_$$_READLE32$PBYTE$$LONGWORD
 	movl	16(%ebp),%edx
 	movl	%eax,(%edx)
-# [63] Planes := ReadLE16(Src + 26);
+# [67] Planes := ReadLE16(Src + 26);
 	movl	-4(%ebp),%eax
 	leal	26(%eax),%eax
 	call	BMP_$$_READLE16$PBYTE$$WORD
 	movw	%ax,-32(%ebp)
-# [64] Bpp := ReadLE16(Src + 28);
+# [68] Bpp := ReadLE16(Src + 28);
 	movl	-4(%ebp),%eax
 	leal	28(%eax),%eax
 	call	BMP_$$_READLE16$PBYTE$$WORD
 	movw	%ax,-28(%ebp)
-# [65] Comp := ReadLE32(Src + 30);
+# [69] Comp := ReadLE32(Src + 30);
 	movl	-4(%ebp),%eax
 	leal	30(%eax),%eax
 	call	BMP_$$_READLE32$PBYTE$$LONGWORD
 	movw	%ax,-36(%ebp)
-# [66] IsTopDown := H < 0;
+# [70] IsTopDown := H < 0;
 	movl	16(%ebp),%eax
 	cmpl	$0,(%eax)
 	setlb	-84(%ebp)
-# [67] if IsTopDown then H := -H;
+# [71] if IsTopDown then H := -H;
 	cmpb	$0,-84(%ebp)
 	jne	.Lj17
 	jmp	.Lj18
@@ -248,7 +248,7 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	movl	%eax,(%edx)
 	.balign 4,0x90
 .Lj18:
-# [68] if Planes <> 1 then begin W := 0; H := 0; Exit; end;
+# [72] if Planes <> 1 then begin W := 0; H := 0; Exit; end;
 	cmpw	$1,-32(%ebp)
 	jne	.Lj19
 	jmp	.Lj20
@@ -260,7 +260,7 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj20:
-# [69] if (Bpp <> 24) and (Bpp <> 32) and (Bpp <> 8) then
+# [73] if (Bpp <> 24) and (Bpp <> 32) and (Bpp <> 8) then
 	cmpw	$24,-28(%ebp)
 	jne	.Lj21
 	jmp	.Lj22
@@ -273,53 +273,53 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	jne	.Lj24
 	jmp	.Lj22
 .Lj24:
-# [71] SerialWriteString('bmp: unsupported bpp=');
+# [75] SerialWriteString('bmp: unsupported bpp=');
 	movl	$_$BMP$_Ld1,%eax
 	call	SERIAL_$$_SERIALWRITESTRING$PCHAR
-# [72] SerialWriteHex32(Bpp);
+# [76] SerialWriteHex32(Bpp);
 	movzwl	-28(%ebp),%eax
 	call	SERIAL_$$_SERIALWRITEHEX32$LONGWORD
-# [73] SerialWriteChar(#13);
+# [77] SerialWriteChar(#13);
 	movb	$13,%al
 	call	SERIAL_$$_SERIALWRITECHAR$CHAR
-# [74] SerialWriteChar(#10);
+# [78] SerialWriteChar(#10);
 	movb	$10,%al
 	call	SERIAL_$$_SERIALWRITECHAR$CHAR
-# [75] W := 0;
+# [79] W := 0;
 	movl	-12(%ebp),%eax
 	movl	$0,(%eax)
-# [76] H := 0;
+# [80] H := 0;
 	movl	16(%ebp),%eax
 	movl	$0,(%eax)
-# [77] Exit;
+# [81] Exit;
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj22:
-# [79] if Comp <> 0 then
+# [83] if Comp <> 0 then
 	cmpw	$0,-36(%ebp)
 	jne	.Lj25
 	jmp	.Lj26
 .Lj25:
-# [81] SerialWriteString('bmp: compressed');
+# [85] SerialWriteString('bmp: compressed');
 	movl	$_$BMP$_Ld2,%eax
 	call	SERIAL_$$_SERIALWRITESTRING$PCHAR
-# [82] SerialWriteChar(#13);
+# [86] SerialWriteChar(#13);
 	movb	$13,%al
 	call	SERIAL_$$_SERIALWRITECHAR$CHAR
-# [83] SerialWriteChar(#10);
+# [87] SerialWriteChar(#10);
 	movb	$10,%al
 	call	SERIAL_$$_SERIALWRITECHAR$CHAR
-# [84] W := 0;
+# [88] W := 0;
 	movl	-12(%ebp),%eax
 	movl	$0,(%eax)
-# [85] H := 0;
+# [89] H := 0;
 	movl	16(%ebp),%eax
 	movl	$0,(%eax)
-# [86] Exit;
+# [90] Exit;
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj26:
-# [88] if (W <= 0) or (H <= 0) then Exit;
+# [92] if (W <= 0) or (H <= 0) then Exit;
 	movl	-12(%ebp),%eax
 	cmpl	$0,(%eax)
 	jle	.Lj27
@@ -333,7 +333,7 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj29:
-# [89] if MaxPixels < LongWord(W * H) then
+# [93] if MaxPixels < LongWord(W * H) then
 	movl	-12(%ebp),%eax
 	movl	16(%ebp),%edx
 	movl	(%eax),%ecx
@@ -343,26 +343,26 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	ja	.Lj30
 	jmp	.Lj31
 .Lj30:
-# [91] SerialWriteString('bmp: too large');
+# [95] SerialWriteString('bmp: too large');
 	movl	$_$BMP$_Ld3,%eax
 	call	SERIAL_$$_SERIALWRITESTRING$PCHAR
-# [92] SerialWriteChar(#13);
+# [96] SerialWriteChar(#13);
 	movb	$13,%al
 	call	SERIAL_$$_SERIALWRITECHAR$CHAR
-# [93] SerialWriteChar(#10);
+# [97] SerialWriteChar(#10);
 	movb	$10,%al
 	call	SERIAL_$$_SERIALWRITECHAR$CHAR
-# [94] W := 0;
+# [98] W := 0;
 	movl	-12(%ebp),%eax
 	movl	$0,(%eax)
-# [95] H := 0;
+# [99] H := 0;
 	movl	16(%ebp),%eax
 	movl	$0,(%eax)
-# [96] Exit;
+# [100] Exit;
 	jmp	.Lj9
 	.balign 4,0x90
 .Lj31:
-# [98] RowBytes := (W * Bpp + 31) div 32 * 4;
+# [102] RowBytes := (W * Bpp + 31) div 32 * 4;
 	movl	-12(%ebp),%eax
 	movzwl	-28(%ebp),%edx
 	movl	(%eax),%eax
@@ -375,7 +375,7 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	sarl	$5,%eax
 	shll	$2,%eax
 	movl	%eax,-40(%ebp)
-# [99] Pad := RowBytes - (W * Bpp div 8);
+# [103] Pad := RowBytes - (W * Bpp div 8);
 	movl	-12(%ebp),%edx
 	movzwl	-28(%ebp),%eax
 	movl	(%edx),%edx
@@ -388,243 +388,202 @@ BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN:
 	movl	-40(%ebp),%edx
 	subl	%eax,%edx
 	movl	%edx,-64(%ebp)
-# [100] PaletteBase := 14 + Integer(HdrSize);
+# [104] PaletteBase := 14 + Integer(HdrSize);
 	movl	-20(%ebp),%eax
 	leal	14(%eax),%eax
 	movl	%eax,-88(%ebp)
-# [101] PixIdx := 0;
+# [105] PixIdx := 0;
 	movl	$0,-68(%ebp)
-# [102] for Y := 0 to H - 1 do
+# [106] for Y := 0 to H - 1 do
 	movl	16(%ebp),%eax
 	movl	(%eax),%eax
 	leal	-1(%eax),%eax
-	movl	%eax,%esi
-	cmpl	$0,%esi
+	cmpl	$0,%eax
 	jge	.Lj32
 	jmp	.Lj33
 .Lj32:
 	movl	$-1,-44(%ebp)
 	.balign 8,0x90
 .Lj34:
-	movl	-44(%ebp),%eax
-	leal	1(%eax),%eax
-	movl	%eax,-44(%ebp)
-# [104] if IsTopDown then DstRow := Y
+	movl	-44(%ebp),%edx
+	leal	1(%edx),%edx
+	movl	%edx,-44(%ebp)
+# [108] if IsTopDown then DstRow := Y
 	cmpb	$0,-84(%ebp)
 	jne	.Lj37
 	jmp	.Lj38
 .Lj37:
-	movl	-44(%ebp),%eax
-	movl	%eax,-52(%ebp)
+	movl	-44(%ebp),%edx
+	movl	%edx,-52(%ebp)
 	jmp	.Lj39
 .Lj38:
-# [105] else DstRow := H - 1 - Y;
-	movl	16(%ebp),%eax
-	movl	(%eax),%eax
-	leal	-1(%eax),%eax
-	subl	-44(%ebp),%eax
-	movl	%eax,-52(%ebp)
+# [109] else DstRow := H - 1 - Y;
+	movl	16(%ebp),%edx
+	movl	(%edx),%edx
+	leal	-1(%edx),%edx
+	subl	-44(%ebp),%edx
+	movl	%edx,-52(%ebp)
 .Lj39:
-# [106] DstPtr := PByte(PByte(Dst) + DstRow * W);
-	movl	-12(%ebp),%eax
-	movl	(%eax),%edx
-	movl	-52(%ebp),%eax
-	imull	%edx,%eax
-	addl	12(%ebp),%eax
-	movl	%eax,-56(%ebp)
-# [107] SrcPtr := PByte(PByte(Src) + ImgOff + LongWord(Y) * LongWord(RowBytes));
-	movl	-44(%ebp),%edx
-	movl	-40(%ebp),%eax
-	imull	%edx,%eax
-	movl	-4(%ebp),%edx
-	movl	-24(%ebp),%ecx
+# [110] DstPtr := Dst;
+	movl	12(%ebp),%edx
+	movl	%edx,-56(%ebp)
+# [111] Inc(DstPtr, DstRow * W * 4);
+	movl	-12(%ebp),%edx
+	movl	(%edx),%ecx
+	movl	-52(%ebp),%edx
+	imull	%ecx,%edx
+	shll	$2,%edx
+	addl	%edx,-56(%ebp)
+# [112] SrcPtr := PByte(PByte(Src) + ImgOff + LongWord(Y) * LongWord(RowBytes));
+	movl	-44(%ebp),%ecx
+	movl	-40(%ebp),%edx
+	imull	%ecx,%edx
+	movl	-4(%ebp),%ecx
+	movl	-24(%ebp),%ebx
+	leal	(%ecx,%ebx),%ecx
 	leal	(%edx,%ecx),%edx
-	leal	(%eax,%edx),%eax
-	movl	%eax,-60(%ebp)
-# [108] for X := 0 to W - 1 do
-	movl	-12(%ebp),%eax
-	movl	(%eax),%eax
-	leal	-1(%eax),%eax
-	movl	%eax,%ebx
-	cmpl	$0,%ebx
+	movl	%edx,-60(%ebp)
+# [113] for X := 0 to W - 1 do
+	movl	-12(%ebp),%edx
+	movl	(%edx),%edx
+	leal	-1(%edx),%edx
+	cmpl	$0,%edx
 	jge	.Lj40
 	jmp	.Lj41
 .Lj40:
 	movl	$-1,-48(%ebp)
 	.balign 8,0x90
 .Lj42:
-	movl	-48(%ebp),%eax
-	leal	1(%eax),%eax
-	movl	%eax,-48(%ebp)
-# [110] if Bpp = 8 then
+	movl	-48(%ebp),%ecx
+	leal	1(%ecx),%ecx
+	movl	%ecx,-48(%ebp)
+# [115] if Bpp = 8 then
 	cmpw	$8,-28(%ebp)
 	je	.Lj45
 	jmp	.Lj46
 .Lj45:
-# [112] PalEntry := PByte(PByte(Src) + PaletteBase + Integer(SrcPtr^) * 4);
-	movl	-60(%ebp),%eax
-	movzbl	(%eax),%eax
-	shll	$2,%eax
-	movl	-4(%ebp),%ecx
-	movl	-88(%ebp),%edx
-	leal	(%ecx,%edx),%edx
-	leal	(%eax,%edx),%eax
-	movl	%eax,-92(%ebp)
-# [113] B := PalEntry^; Inc(PalEntry);
-	movl	-92(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-80(%ebp)
+# [117] PalEntry := PByte(PByte(Src) + PaletteBase + Integer(SrcPtr^) * 4);
+	movl	-60(%ebp),%ecx
+	movzbl	(%ecx),%ecx
+	shll	$2,%ecx
+	movl	-4(%ebp),%esi
+	movl	-88(%ebp),%ebx
+	leal	(%esi,%ebx),%ebx
+	leal	(%ecx,%ebx),%ecx
+	movl	%ecx,-92(%ebp)
+# [118] B := PalEntry^; Inc(PalEntry);
+	movl	-92(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-80(%ebp)
 	addl	$1,-92(%ebp)
-# [114] G := PalEntry^; Inc(PalEntry);
-	movl	-92(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-76(%ebp)
+# [119] G := PalEntry^; Inc(PalEntry);
+	movl	-92(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-76(%ebp)
 	addl	$1,-92(%ebp)
-# [115] R := PalEntry^;
-	movl	-92(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-72(%ebp)
-# [116] if (R = 255) and (G = 0) and (B = 0) then DstPtr^ := 0
-	cmpb	$255,-72(%ebp)
-	je	.Lj47
-	jmp	.Lj48
-.Lj47:
-	cmpb	$0,-76(%ebp)
-	je	.Lj49
-	jmp	.Lj48
-.Lj49:
-	cmpb	$0,-80(%ebp)
-	je	.Lj50
-	jmp	.Lj48
-.Lj50:
-	movl	-56(%ebp),%eax
-	movb	$0,(%eax)
-	jmp	.Lj51
-.Lj48:
-# [117] else DstPtr^ := RGBToVGA(R, G, B);
-	movb	-80(%ebp),%cl
-	movb	-76(%ebp),%dl
-	movb	-72(%ebp),%al
-	call	BMP_$$_RGBTOVGA$BYTE$BYTE$BYTE$$BYTE
-	movl	-56(%ebp),%edx
-	movb	%al,(%edx)
-.Lj51:
-	jmp	.Lj52
+# [120] R := PalEntry^;
+	movl	-92(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-72(%ebp)
+# [121] Inc(SrcPtr);
+	addl	$1,-60(%ebp)
+	jmp	.Lj47
 .Lj46:
-# [119] else if Bpp = 24 then
+# [123] else if Bpp = 24 then
 	cmpw	$24,-28(%ebp)
+	je	.Lj48
+	jmp	.Lj49
+.Lj48:
+# [125] B := SrcPtr^; Inc(SrcPtr);
+	movl	-60(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-80(%ebp)
+	addl	$1,-60(%ebp)
+# [126] G := SrcPtr^; Inc(SrcPtr);
+	movl	-60(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-76(%ebp)
+	addl	$1,-60(%ebp)
+# [127] R := SrcPtr^; Inc(SrcPtr);
+	movl	-60(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-72(%ebp)
+	addl	$1,-60(%ebp)
+	jmp	.Lj50
+.Lj49:
+# [131] B := SrcPtr^; Inc(SrcPtr);
+	movl	-60(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-80(%ebp)
+	addl	$1,-60(%ebp)
+# [132] G := SrcPtr^; Inc(SrcPtr);
+	movl	-60(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-76(%ebp)
+	addl	$1,-60(%ebp)
+# [133] R := SrcPtr^; Inc(SrcPtr);
+	movl	-60(%ebp),%ecx
+	movb	(%ecx),%cl
+	movb	%cl,-72(%ebp)
+	addl	$1,-60(%ebp)
+# [134] Inc(SrcPtr);
+	addl	$1,-60(%ebp)
+.Lj50:
+.Lj47:
+# [136] if (R = 255) and (G = 0) and (B = 0) then
+	cmpb	$255,-72(%ebp)
+	je	.Lj51
+	jmp	.Lj52
+.Lj51:
+	cmpb	$0,-76(%ebp)
 	je	.Lj53
-	jmp	.Lj54
+	jmp	.Lj52
 .Lj53:
-# [121] B := SrcPtr^; Inc(SrcPtr);
-	movl	-60(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-80(%ebp)
-	addl	$1,-60(%ebp)
-# [122] G := SrcPtr^; Inc(SrcPtr);
-	movl	-60(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-76(%ebp)
-	addl	$1,-60(%ebp)
-# [123] R := SrcPtr^; Inc(SrcPtr);
-	movl	-60(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-72(%ebp)
-	addl	$1,-60(%ebp)
-# [124] if (R = 255) and (G = 0) and (B = 0) then DstPtr^ := 0
-	cmpb	$255,-72(%ebp)
-	je	.Lj55
-	jmp	.Lj56
-.Lj55:
-	cmpb	$0,-76(%ebp)
-	je	.Lj57
-	jmp	.Lj56
-.Lj57:
 	cmpb	$0,-80(%ebp)
-	je	.Lj58
-	jmp	.Lj56
-.Lj58:
-	movl	-56(%ebp),%eax
-	movb	$0,(%eax)
-	jmp	.Lj59
-.Lj56:
-# [125] else DstPtr^ := RGBToVGA(R, G, B);
-	movb	-80(%ebp),%cl
-	movb	-76(%ebp),%dl
-	movb	-72(%ebp),%al
-	call	BMP_$$_RGBTOVGA$BYTE$BYTE$BYTE$$BYTE
-	movl	-56(%ebp),%edx
-	movb	%al,(%edx)
-.Lj59:
-	jmp	.Lj60
+	je	.Lj54
+	jmp	.Lj52
 .Lj54:
-# [129] B := SrcPtr^; Inc(SrcPtr);
-	movl	-60(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-80(%ebp)
-	addl	$1,-60(%ebp)
-# [130] G := SrcPtr^; Inc(SrcPtr);
-	movl	-60(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-76(%ebp)
-	addl	$1,-60(%ebp)
-# [131] R := SrcPtr^; Inc(SrcPtr);
-	movl	-60(%ebp),%eax
-	movb	(%eax),%al
-	movb	%al,-72(%ebp)
-	addl	$1,-60(%ebp)
-# [132] Inc(SrcPtr);
-	addl	$1,-60(%ebp)
-# [133] if (R = 255) and (G = 0) and (B = 0) then DstPtr^ := 0
-	cmpb	$255,-72(%ebp)
-	je	.Lj61
-	jmp	.Lj62
-.Lj61:
-	cmpb	$0,-76(%ebp)
-	je	.Lj63
-	jmp	.Lj62
-.Lj63:
-	cmpb	$0,-80(%ebp)
-	je	.Lj64
-	jmp	.Lj62
-.Lj64:
-	movl	-56(%ebp),%eax
-	movb	$0,(%eax)
-	jmp	.Lj65
-.Lj62:
-# [134] else DstPtr^ := RGBToVGA(R, G, B);
-	movb	-80(%ebp),%cl
-	movb	-76(%ebp),%dl
-	movb	-72(%ebp),%al
-	call	BMP_$$_RGBTOVGA$BYTE$BYTE$BYTE$$BYTE
-	movl	-56(%ebp),%edx
-	movb	%al,(%edx)
-.Lj65:
-.Lj60:
+# [137] PLongWord(DstPtr)^ := $00000000   // transparente
+	movl	-56(%ebp),%ecx
+	movl	$0,(%ecx)
+	jmp	.Lj55
 .Lj52:
-# [136] Inc(DstPtr);
-	addl	$1,-56(%ebp)
-# [137] Inc(PixIdx);
+# [139] PLongWord(DstPtr)^ := $FF000000 or LongWord(R) or
+	movzbl	-72(%ebp),%ebx
+	orl	$-16777216,%ebx
+# [140] (LongWord(G) shl 8) or (LongWord(B) shl 16);
+	movzbl	-76(%ebp),%ecx
+	shll	$8,%ecx
+	orl	%ecx,%ebx
+	movzbl	-80(%ebp),%ecx
+	shll	$16,%ecx
+	orl	%ecx,%ebx
+	movl	-56(%ebp),%ecx
+	movl	%ebx,(%ecx)
+.Lj55:
+# [141] Inc(DstPtr, 4);
+	addl	$4,-56(%ebp)
+# [142] Inc(PixIdx);
 	addl	$1,-68(%ebp)
-	cmpl	-48(%ebp),%ebx
+	cmpl	-48(%ebp),%edx
 	jle	.Lj44
 	jmp	.Lj42
 .Lj44:
 	.balign 4,0x90
 .Lj41:
-# [139] Inc(SrcPtr, Pad);
-	movl	-64(%ebp),%eax
-	addl	%eax,-60(%ebp)
-	cmpl	-44(%ebp),%esi
+# [144] Inc(SrcPtr, Pad);
+	movl	-64(%ebp),%edx
+	addl	%edx,-60(%ebp)
+	cmpl	-44(%ebp),%eax
 	jle	.Lj36
 	jmp	.Lj34
 .Lj36:
 	.balign 4,0x90
 .Lj33:
-# [141] BMPDecode := True;
+# [146] BMPDecode := True;
 	movb	$1,-16(%ebp)
 .Lj9:
-# [142] end;
+# [147] end;
 	movb	-16(%ebp),%al
 	popl	%esi
 	popl	%ebx

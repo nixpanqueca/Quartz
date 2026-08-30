@@ -1,5 +1,5 @@
 param(
-    [string]$Out = (Join-Path (Split-Path -Parent $PSScriptRoot) 'assets\sprites\face.bmp')
+    [string]$Out = (Join-Path (Split-Path -Parent $PSScriptRoot) 'disk\system\compiled\prism\bitmap\face.bmp')
 )
 
 # Gera um BMP 24-bit (BI_RGB, bottom-up) 16x16 de exemplo:

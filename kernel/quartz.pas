@@ -13,7 +13,7 @@ procedure Print(Text: PChar);
 
 implementation
 
-uses Serial, Video, Mouse, Seek, Buttons, CDROM, Keyboard, OpenFirmware;
+uses Serial, Video, Mouse, Prism, Buttons, CDROM, Keyboard, OpenFirmware, Svc, OpenShell;
 
 var
   VideoMemory: PByte = Pointer($B8000);
@@ -83,6 +83,8 @@ begin
     SerialWriteChar(#13);
     SerialWriteChar(#10);
 
+    ProgramSvcInit;
+
     OFinit;
 
     ClearScreen($0F);
@@ -97,13 +99,13 @@ begin
     WriteAt(WinX + (WinW - Length('Welcome to Aether') * 12) div 2,
             WinY + (WinH - 16) div 3,
             'Welcome to Aether', 16);
-    DrawBMP('SPRITES\FACE@2X.BMP', WinX + 35, WinY + 35);
+    DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FACE@2X.BMP', WinX + 35, WinY + 35);
     DelayMS(2000);
 
     ClearScreen($0F);
     FillPattern8x8(MacGray, 0, $0F);
     DelayMS(100);
-    SeekInit;
+    PrismInit;
     CursorX := GetMouseX;
     CursorY := GetMouseY;
     SaveCursorArea(CursorX, CursorY);
@@ -122,6 +124,8 @@ begin
             DrawCursor(CursorX, CursorY);
         end;
         CheckButtons;
+        if GetOutsideClick then
+            ClearShortcutSelection;
     end;
 end;
 

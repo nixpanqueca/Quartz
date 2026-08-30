@@ -6,6 +6,8 @@ unit Keyboard;
 
 interface
 
+uses Mouse;
+
 const
   SCAN_UP      = $48;
   SCAN_DOWN    = $50;
@@ -91,8 +93,17 @@ var
   Sc: Byte;
   IsBreak: Boolean;
 begin
-  while (InB($64) and 1) <> 0 do
+  while True do
   begin
+    if (InB($64) and 1) = 0 then
+      Exit;
+    if (InB($64) and $20) <> 0 then
+    begin
+      // Byte do mouse (aux device): roteia para o parser do mouse, em vez de
+      // trata-lo como tecla (evita caracteres fantasmas quando o mouse e movido).
+      MouseDeliver(InB($60));
+      Continue;
+    end;
     Sc := InB($60);
     if Sc = $E0 then
     begin
@@ -105,7 +116,8 @@ begin
     end
     else if Sc = $E1 then
     begin
-      while (InB($64) and 1) <> 0 do InB($60);
+      while (InB($64) and 1) <> 0 do
+        InB($60);
     end
     else
     begin

@@ -1,3 +1,3 @@
 @echo off
-powershell -ExecutionPolicy Bypass -File "%~dp0\tools\convert_bmps.ps1" -Dir "%~dp0\assets\sprites"
+powershell -ExecutionPolicy Bypass -File "%~dp0\tools\convert_bmps.ps1" -Dir "%~dp0\disk\system\compiled\prism\bitmap"
 pause

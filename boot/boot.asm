@@ -61,6 +61,17 @@ start:
     ; Root directory record is at PVD+136; extent LBA (LE) at +138,
     ; data length (LE) at +146.
     mov eax, [0x3000 + 138]     ; root extent (2048-sector LBA)
+    pushad
+    mov al, 'E'
+    call serial_putc
+    mov ebx, eax
+    call serial_print_hex32
+    mov al, '|'
+    call serial_putc
+    xor ebx, ebx
+    mov bx, word [0x3000 + 138]
+    call serial_print_hex32
+    popad
     mov bx, 0x3000              ; reuse buffer (root dir < 2048 bytes)
     call read_cd
     jc cd_e3
@@ -112,6 +123,16 @@ load_kernel:
 .kl:
     test ebp, ebp
     jz .kl_done
+    pushad
+    push eax
+    mov al, '#'
+    call serial_putc
+    mov ebx, eax
+    call serial_print_hex32
+    mov al, ':'
+    call serial_putc
+    pop eax
+    popad
     call read_cd
     jc cd_e5
     inc eax                         ; next 2048-block
@@ -129,27 +150,33 @@ load_kernel:
     mov al, 'K'
     call serial_putc
 
-    ; ---------------- VBE: 640x480x8 (modo 0x101) linear framebuffer ----------------
+    ; ---------------- VBE: 640x480x32 (modo 0x112) linear framebuffer ----------------
     ; Buffers do VBE em RAM: 0x5100 (info do modo)
     mov ax, 0x0500
     mov es, ax
 
-    ; VBE: info do modo 0x0101 (640x480x8)
+    ; VBE: info do modo 0x0112 (640x480x32 true color)
     mov ax, 0x4F01
-    mov cx, 0x0101
+    mov cx, 0x0112
     mov di, 0x0100
     int 0x10
     cmp ax, 0x004F
     jne video_error
 
     ; boot info em 0x1000: +0 = endereco do framebuffer (dword),
-    ;                      +4 = largura, +6 = altura
+    ;                      +4 = largura, +6 = altura, +8 = bytes por linha
     mov ax, 0x0500
     mov es, ax
     mov eax, dword [es:0x0128]   ; PhysBasePtr (linear framebuffer)
     mov [0x1000], eax
     mov word [0x1004], 640
     mov word [0x1006], 480
+    mov ax, word [es:0x0110]     ; BytesPerScanLine (pitch)
+    test ax, ax
+    jnz .pitch_ok
+    mov ax, 640 * 4              ; fallback: 640 px * 4 bytes
+.pitch_ok:
+    mov word [0x1008], ax
 
     ; Se a VGA for PCI (ex: qemu -vga std), o framebuffer real fica no BAR0
     ; da placa, nao no endereco fixo reportado pelo VBE (0xE0000000).
@@ -163,9 +190,9 @@ load_kernel:
     mov si, dbg_crlf
     call serial_print_str
 
-    ; VBE: ativa modo 0x0101 | bit 14 (linear framebuffer)
+    ; VBE: ativa modo 0x0112 | bit 14 (linear framebuffer)
     mov ax, 0x4F02
-    mov bx, 0x4101
+    mov bx, 0x4112
     int 0x10
     cmp ax, 0x004F
     jne video_error
@@ -179,6 +206,7 @@ video_error:
     mov dword [0x1000], 0xA0000
     mov word [0x1004], 320
     mov word [0x1006], 200
+    mov word [0x1008], 320
 
 video_done:
 

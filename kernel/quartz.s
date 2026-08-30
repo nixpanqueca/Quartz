@@ -172,18 +172,20 @@ _Kernel:
 # [84] SerialWriteChar(#10);
 	movb	$10,%al
 	call	SERIAL_$$_SERIALWRITECHAR$CHAR
-# [86] OFinit;
+# [86] ProgramSvcInit;
+	call	SVC_$$_PROGRAMSVCINIT
+# [88] OFinit;
 	call	OPENFIRMWARE_$$_OFINIT
-# [88] ClearScreen($0F);
+# [90] ClearScreen($0F);
 	movb	$15,%al
 	call	VIDEO_$$_CLEARSCREEN$BYTE
-# [89] FillPattern8x8(MacGray, 0, $0F);
+# [91] FillPattern8x8(MacGray, 0, $0F);
 	pushl	$15
 	movl	$TC_$QUARTZ_$$_MACGRAY,%eax
 	movb	$0,%cl
 	movl	$7,%edx
 	call	VIDEO_$$_FILLPATTERN8X8$array_of_BYTE$BYTE$BYTE
-# [90] WinW := RWidth div 5 * 4;
+# [92] WinW := RWidth div 5 * 4;
 	movl	U_$VIDEO_$$_RWIDTH,%ecx
 	movl	$1717986919,%eax
 	imull	%ecx
@@ -192,7 +194,7 @@ _Kernel:
 	addl	%ecx,%edx
 	shll	$2,%edx
 	movl	%edx,-20(%ebp)
-# [91] WinH := RHeight div 4 * 2;
+# [93] WinH := RHeight div 4 * 2;
 	movl	U_$VIDEO_$$_RHEIGHT,%edx
 	movl	%edx,%eax
 	sarl	$31,%eax
@@ -201,7 +203,7 @@ _Kernel:
 	sarl	$2,%edx
 	shll	$1,%edx
 	movl	%edx,-24(%ebp)
-# [92] WinX := (RWidth - WinW) div 2;
+# [94] WinX := (RWidth - WinW) div 2;
 	movl	U_$VIDEO_$$_RWIDTH,%eax
 	movl	-20(%ebp),%edx
 	subl	%edx,%eax
@@ -210,7 +212,7 @@ _Kernel:
 	addl	%edx,%eax
 	sarl	$1,%eax
 	movl	%eax,-12(%ebp)
-# [93] WinY := (RHeight - WinH) div 2 - 20;
+# [95] WinY := (RHeight - WinH) div 2 - 20;
 	movl	U_$VIDEO_$$_RHEIGHT,%eax
 	movl	-24(%ebp),%edx
 	subl	%edx,%eax
@@ -220,14 +222,14 @@ _Kernel:
 	sarl	$1,%eax
 	subl	$20,%eax
 	movl	%eax,-16(%ebp)
-# [94] FillRect(WinX, WinY, WinW, WinH, $0F);
+# [96] FillRect(WinX, WinY, WinW, WinH, $0F);
 	pushl	-24(%ebp)
 	pushl	$15
 	movl	-20(%ebp),%ecx
 	movl	-16(%ebp),%edx
 	movl	-12(%ebp),%eax
 	call	VIDEO_$$_FILLRECT$LONGINT$LONGINT$LONGINT$LONGINT$BYTE
-# [95] FillRect(WinX+4, WinY+4, WinW-8, WinH-8, 0);
+# [97] FillRect(WinX+4, WinY+4, WinW-8, WinH-8, 0);
 	movl	-24(%ebp),%eax
 	leal	-8(%eax),%eax
 	pushl	%eax
@@ -239,7 +241,7 @@ _Kernel:
 	movl	-12(%ebp),%eax
 	leal	4(%eax),%eax
 	call	VIDEO_$$_FILLRECT$LONGINT$LONGINT$LONGINT$LONGINT$BYTE
-# [96] FillRect(WinX+6, WinY+6, WinW-12, WinH-12, $0F);
+# [98] FillRect(WinX+6, WinY+6, WinW-12, WinH-12, $0F);
 	movl	-24(%ebp),%eax
 	leal	-12(%eax),%eax
 	pushl	%eax
@@ -251,9 +253,9 @@ _Kernel:
 	movl	-12(%ebp),%eax
 	leal	6(%eax),%eax
 	call	VIDEO_$$_FILLRECT$LONGINT$LONGINT$LONGINT$LONGINT$BYTE
-# [97] WriteAt(WinX + (WinW - Length('Welcome to Aether') * 12) div 2,
+# [99] WriteAt(WinX + (WinW - Length('Welcome to Aether') * 12) div 2,
 	pushl	$16
-# [98] WinY + (WinH - 16) div 3,
+# [100] WinY + (WinH - 16) div 3,
 	movl	-24(%ebp),%eax
 	leal	-16(%eax),%ecx
 	movl	$1431655766,%eax
@@ -268,56 +270,56 @@ _Kernel:
 	addl	%ecx,%eax
 	sarl	$1,%eax
 	addl	-12(%ebp),%eax
-# [99] 'Welcome to Aether', 16);
+# [101] 'Welcome to Aether', 16);
 	movl	$_$QUARTZ$_Ld4,%ecx
 	call	VIDEO_$$_WRITEAT$LONGINT$LONGINT$PCHAR$LONGINT
-# [100] DrawBMP('SPRITES\FACE@2X.BMP', WinX + 35, WinY + 35);
+# [102] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FACE@2X.BMP', WinX + 35, WinY + 35);
 	movl	-16(%ebp),%eax
 	leal	35(%eax),%ecx
 	movl	-12(%ebp),%eax
 	leal	35(%eax),%edx
 	movl	$_$QUARTZ$_Ld5,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [101] DelayMS(2000);
+# [103] DelayMS(2000);
 	movl	$2000,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [103] ClearScreen($0F);
+# [105] ClearScreen($0F);
 	movb	$15,%al
 	call	VIDEO_$$_CLEARSCREEN$BYTE
-# [104] FillPattern8x8(MacGray, 0, $0F);
+# [106] FillPattern8x8(MacGray, 0, $0F);
 	pushl	$15
 	movl	$TC_$QUARTZ_$$_MACGRAY,%eax
 	movb	$0,%cl
 	movl	$7,%edx
 	call	VIDEO_$$_FILLPATTERN8X8$array_of_BYTE$BYTE$BYTE
-# [105] DelayMS(100);
+# [107] DelayMS(100);
 	movl	$100,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [106] SeekInit;
-	call	SEEK_$$_SEEKINIT
-# [107] CursorX := GetMouseX;
+# [108] PrismInit;
+	call	PRISM_$$_PRISMINIT
+# [109] CursorX := GetMouseX;
 	call	MOUSE_$$_GETMOUSEX$$LONGINT
 	movl	%eax,-4(%ebp)
-# [108] CursorY := GetMouseY;
+# [110] CursorY := GetMouseY;
 	call	MOUSE_$$_GETMOUSEY$$LONGINT
 	movl	%eax,-8(%ebp)
-# [109] SaveCursorArea(CursorX, CursorY);
+# [111] SaveCursorArea(CursorX, CursorY);
 	movl	-8(%ebp),%edx
 	movl	-4(%ebp),%eax
 	call	VIDEO_$$_SAVECURSORAREA$LONGINT$LONGINT
-# [110] DrawCursor(CursorX, CursorY);
+# [112] DrawCursor(CursorX, CursorY);
 	movl	-8(%ebp),%edx
 	movl	-4(%ebp),%eax
 	call	VIDEO_$$_DRAWCURSOR$LONGINT$LONGINT
-# [112] while True do
+# [114] while True do
 	jmp	.Lj21
 	.balign 8,0x90
 .Lj20:
-# [114] MousePoll;
+# [116] MousePoll;
 	call	MOUSE_$$_MOUSEPOLL
-# [115] KeyboardPoll;
+# [117] KeyboardPoll;
 	call	KEYBOARD_$$_KEYBOARDPOLL
-# [116] if (GetMouseX <> CursorX) or (GetMouseY <> CursorY) then
+# [118] if (GetMouseX <> CursorX) or (GetMouseY <> CursorY) then
 	call	MOUSE_$$_GETMOUSEX$$LONGINT
 	cmpl	-4(%ebp),%eax
 	jne	.Lj23
@@ -328,31 +330,41 @@ _Kernel:
 	jne	.Lj23
 	jmp	.Lj25
 .Lj23:
-# [118] RestoreCursorArea(CursorX, CursorY);
+# [120] RestoreCursorArea(CursorX, CursorY);
 	movl	-8(%ebp),%edx
 	movl	-4(%ebp),%eax
 	call	VIDEO_$$_RESTORECURSORAREA$LONGINT$LONGINT
-# [119] CursorX := GetMouseX;
+# [121] CursorX := GetMouseX;
 	call	MOUSE_$$_GETMOUSEX$$LONGINT
 	movl	%eax,-4(%ebp)
-# [120] CursorY := GetMouseY;
+# [122] CursorY := GetMouseY;
 	call	MOUSE_$$_GETMOUSEY$$LONGINT
 	movl	%eax,-8(%ebp)
-# [121] SaveCursorArea(CursorX, CursorY);
+# [123] SaveCursorArea(CursorX, CursorY);
 	movl	-8(%ebp),%edx
 	movl	-4(%ebp),%eax
 	call	VIDEO_$$_SAVECURSORAREA$LONGINT$LONGINT
-# [122] DrawCursor(CursorX, CursorY);
+# [124] DrawCursor(CursorX, CursorY);
 	movl	-8(%ebp),%edx
 	movl	-4(%ebp),%eax
 	call	VIDEO_$$_DRAWCURSOR$LONGINT$LONGINT
 	.balign 4,0x90
 .Lj25:
-# [124] CheckButtons;
+# [126] CheckButtons;
 	call	BUTTONS_$$_CHECKBUTTONS
+# [127] if GetOutsideClick then
+	call	BUTTONS_$$_GETOUTSIDECLICK$$BOOLEAN
+	testb	%al,%al
+	jne	.Lj26
+	jmp	.Lj27
+.Lj26:
+# [128] ClearShortcutSelection;
+	call	PRISM_$$_CLEARSHORTCUTSELECTION
+	.balign 4,0x90
+.Lj27:
 .Lj21:
 	jmp	.Lj20
-# [126] end;
+# [130] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
@@ -413,6 +425,6 @@ _$QUARTZ$_Ld4:
 	.balign 4
 .globl	_$QUARTZ$_Ld5
 _$QUARTZ$_Ld5:
-	.ascii	"SPRITES\\FACE@2X.BMP\000"
+	.ascii	"SYSTEM\\COMPILED\\PRISM\\BITMAP\\FACE@2X.BMP\000"
 # End asmlist al_typedconsts
 

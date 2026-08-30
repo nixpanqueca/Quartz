@@ -17,7 +17,7 @@ var
 implementation
 
 uses
-  Video, Keyboard, bmp, Serial, Seek, OpenShell;
+  Video, Keyboard, bmp, Serial, Prism, OpenShell;
 
 const
   MacGray: array[0..7] of Byte = ($AA, $55, $AA, $55, $AA, $55, $AA, $55);
@@ -67,30 +67,36 @@ end;
 procedure OFinit;
 var
   CX, CY: Integer;
+  PrevShellKey, OpenShellKey: Boolean;
 begin
   CX := (RWidth - 32) div 2;
   CY := (RHeight - 32) div 2;
-  DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
   DelayMS(400);
-  DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
   DelayMS(400);
-  DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
   DelayMS(400);
-  DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
   DelayMS(400);
-  DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
   DelayMS(400);
-  DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
   DelayMS(400);
-  DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
   DelayMS(400);
-  DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+  DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
   DelayMS(400);
   KeyboardPoll;
-  if ScanIsPressed(SCAN_LALT) and KeyIsPressed('o') and KeyIsPressed('f') then
+  // Alt+O+F (OpenFirmware) ou F9 abre o OpenShell; fecha de volta
+  OpenShellKey := (SpecialKeyIsPressed(SCAN_LALT) and KeyIsPressed('o') and KeyIsPressed('f'))
+                or SpecialKeyIsPressed(SCAN_F9);
+  if KeyIsPressed('o') and KeyIsPressed('f') then
   begin
-    ClearScreen($0F);
+      ShellLoop;
+      ClearScreen($0F);
   end;
+  PrevShellKey := OpenShellKey;
 end;
 
 end.

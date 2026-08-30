@@ -1,118 +1,172 @@
 	.file "video.pas"
 # Begin asmlist al_procedures
 
-.section .text.n_video_$$_outb$word$byte,"x"
+.section .text.n_video_$$_packpix$byte$byte$byte$$longword,"x"
 	.balign 16,0x90
-VIDEO_$$_OUTB$WORD$BYTE:
+VIDEO_$$_PACKPIX$BYTE$BYTE$BYTE$$LONGWORD:
 # [video.pas]
-# [36] begin
+# [53] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-8(%esp),%esp
-# Var Addr located at ebp-4, size=OS_16
-# Var Value located at ebp-8, size=OS_8
-	movw	%ax,-4(%ebp)
+	leal	-16(%esp),%esp
+# Var R located at ebp-4, size=OS_8
+# Var G located at ebp-8, size=OS_8
+# Var B located at ebp-12, size=OS_8
+# Var $result located at ebp-16, size=OS_32
+	movb	%al,-4(%ebp)
 	movb	%dl,-8(%ebp)
-#  CPU PENTIUM
-# [38] mov dx, Addr
-	movw	-4(%ebp),%dx
-# [39] mov al, Value
-	movb	-8(%ebp),%al
-# [40] out dx, al
-	outb	%al,%dx
-#  CPU PENTIUM
-# [42] end;
+	movb	%cl,-12(%ebp)
+# [54] PackPix := LongWord(R) or (LongWord(G) shl 8) or (LongWord(B) shl 16);
+	movzbl	-8(%ebp),%eax
+	shll	$8,%eax
+	movzbl	-4(%ebp),%edx
+	orl	%edx,%eax
+	movzbl	-12(%ebp),%edx
+	shll	$16,%edx
+	orl	%edx,%eax
+	movl	%eax,-16(%ebp)
+# [55] end;
+	movl	-16(%ebp),%eax
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
 
-.section .text.n_video_$$_videoinit,"x"
+.section .text.n_video_$$_palcolor$byte$$longword,"x"
 	.balign 16,0x90
-.globl	VIDEO_$$_VIDEOINIT
-VIDEO_$$_VIDEOINIT:
-# [48] begin
+VIDEO_$$_PALCOLOR$BYTE$$LONGWORD:
+# [59] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-16(%esp),%esp
+	leal	-8(%esp),%esp
+# Var C located at ebp-4, size=OS_8
+# Var $result located at ebp-8, size=OS_32
+	movb	%al,-4(%ebp)
+# [60] PalColor := PackPix(PalR[C], PalG[C], PalB[C]);
+	movzbl	-4(%ebp),%eax
+	movb	U_$VIDEO_$$_PALB(,%eax,1),%cl
+	movzbl	-4(%ebp),%eax
+	movb	U_$VIDEO_$$_PALG(,%eax,1),%dl
+	movzbl	-4(%ebp),%eax
+	movb	U_$VIDEO_$$_PALR(,%eax,1),%al
+	call	VIDEO_$$_PACKPIX$BYTE$BYTE$BYTE$$LONGWORD
+	movl	%eax,-8(%ebp)
+# [61] end;
+	movl	-8(%ebp),%eax
+	movl	%ebp,%esp
+	popl	%ebp
+	ret
+
+.section .text.n_video_$$_initpalette,"x"
+	.balign 16,0x90
+VIDEO_$$_INITPALETTE:
+# [67] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+	leal	-56(%esp),%esp
 # Var i located at ebp-4, size=OS_S32
-# Var r located at ebp-8, size=OS_8
-# Var g located at ebp-12, size=OS_8
-# Var b located at ebp-16, size=OS_8
-# [49] Framebuffer := PByte(PLongWord($1000)^);
-	movl	4096,%eax
-	movl	%eax,U_$VIDEO_$$_FRAMEBUFFER
-# [50] RWidth := Integer(PWord($1004)^);
-	movzwl	4100,%eax
-	movl	%eax,U_$VIDEO_$$_RWIDTH
-# [51] RHeight := Integer(PWord($1006)^);
-	movzwl	4102,%eax
-	movl	%eax,U_$VIDEO_$$_RHEIGHT
-# [52] OutB($3C8, 0);
-	movb	$0,%dl
-	movw	$968,%ax
-	call	VIDEO_$$_OUTB$WORD$BYTE
-# [53] for i := 0 to 15 do
-	movl	$-1,-4(%ebp)
+# Var lvl located at ebp-8, size=OS_S32
+# Var BClr located at ebp-56, size=OS_NO
+# [69] BClr[1][0] := 0;    BClr[1][1] := 0;    BClr[1][2] := 170;   // azul
+	movb	$0,-53(%ebp)
+	movb	$0,-52(%ebp)
+	movb	$170,-51(%ebp)
+# [70] BClr[2][0] := 0;    BClr[2][1] := 170;  BClr[2][2] := 0;     // verde
+	movb	$0,-50(%ebp)
+	movb	$170,-49(%ebp)
+	movb	$0,-48(%ebp)
+# [71] BClr[3][0] := 0;    BClr[3][1] := 170;  BClr[3][2] := 170;   // ciano
+	movb	$0,-47(%ebp)
+	movb	$170,-46(%ebp)
+	movb	$170,-45(%ebp)
+# [72] BClr[4][0] := 170;  BClr[4][1] := 0;    BClr[4][2] := 0;     // vermelho
+	movb	$170,-44(%ebp)
+	movb	$0,-43(%ebp)
+	movb	$0,-42(%ebp)
+# [73] BClr[5][0] := 170;  BClr[5][1] := 0;    BClr[5][2] := 170;   // magenta
+	movb	$170,-41(%ebp)
+	movb	$0,-40(%ebp)
+	movb	$170,-39(%ebp)
+# [74] BClr[6][0] := 170;  BClr[6][1] := 85;   BClr[6][2] := 0;     // marrom
+	movb	$170,-38(%ebp)
+	movb	$85,-37(%ebp)
+	movb	$0,-36(%ebp)
+# [75] BClr[7][0] := 170;  BClr[7][1] := 170;  BClr[7][2] := 170;   // cinza claro
+	movb	$170,-35(%ebp)
+	movb	$170,-34(%ebp)
+	movb	$170,-33(%ebp)
+# [76] BClr[8][0] := 85;   BClr[8][1] := 85;   BClr[8][2] := 85;    // cinza escuro
+	movb	$85,-32(%ebp)
+	movb	$85,-31(%ebp)
+	movb	$85,-30(%ebp)
+# [77] BClr[9][0] := 85;   BClr[9][1] := 85;   BClr[9][2] := 255;   // azul claro
+	movb	$85,-29(%ebp)
+	movb	$85,-28(%ebp)
+	movb	$255,-27(%ebp)
+# [78] BClr[10][0] := 85;  BClr[10][1] := 255; BClr[10][2] := 85;   // verde claro
+	movb	$85,-26(%ebp)
+	movb	$255,-25(%ebp)
+	movb	$85,-24(%ebp)
+# [79] BClr[11][0] := 85;  BClr[11][1] := 255; BClr[11][2] := 255;  // ciano claro
+	movb	$85,-23(%ebp)
+	movb	$255,-22(%ebp)
+	movb	$255,-21(%ebp)
+# [80] BClr[12][0] := 255; BClr[12][1] := 85;  BClr[12][2] := 85;   // vermelho claro
+	movb	$255,-20(%ebp)
+	movb	$85,-19(%ebp)
+	movb	$85,-18(%ebp)
+# [81] BClr[13][0] := 255; BClr[13][1] := 85;  BClr[13][2] := 255;  // magenta claro
+	movb	$255,-17(%ebp)
+	movb	$85,-16(%ebp)
+	movb	$255,-15(%ebp)
+# [82] BClr[14][0] := 255; BClr[14][1] := 255; BClr[14][2] := 85;   // amarelo
+	movb	$255,-14(%ebp)
+	movb	$255,-13(%ebp)
+	movb	$85,-12(%ebp)
+# [84] PalR[0] := 0; PalG[0] := 0; PalB[0] := 0;
+	movb	$0,U_$VIDEO_$$_PALR
+	movb	$0,U_$VIDEO_$$_PALG
+	movb	$0,U_$VIDEO_$$_PALB
+# [85] for i := 1 to 14 do
+	movl	$0,-4(%ebp)
 	.balign 8,0x90
-.Lj7:
-	movl	-4(%ebp),%eax
-	leal	1(%eax),%eax
-	movl	%eax,-4(%ebp)
-# [55] case i of
-	movl	-4(%ebp),%eax
-	testl	%eax,%eax
-	jl	.Lj11
-	testl	%eax,%eax
-	je	.Lj12
-	subl	$15,%eax
-	je	.Lj13
-	jmp	.Lj11
-	.balign 4,0x90
-.Lj12:
-# [56] 0:  begin r := 0;  g := 0;  b := 0;  end;
-	movb	$0,-8(%ebp)
-	movb	$0,-12(%ebp)
-	movb	$0,-16(%ebp)
-	jmp	.Lj10
-	.balign 4,0x90
-.Lj13:
-# [57] 15: begin r := 63; g := 63; b := 63; end;
-	movb	$63,-8(%ebp)
-	movb	$63,-12(%ebp)
-	movb	$63,-16(%ebp)
-	jmp	.Lj10
-	.balign 4,0x90
-.Lj11:
-# [59] begin r := 0; g := 0; b := 0; end;
-	movb	$0,-8(%ebp)
-	movb	$0,-12(%ebp)
-	movb	$0,-16(%ebp)
-	.balign 4,0x90
-.Lj10:
-# [61] OutB($3C9, r);
-	movb	-8(%ebp),%dl
-	movw	$969,%ax
-	call	VIDEO_$$_OUTB$WORD$BYTE
-# [62] OutB($3C9, g);
-	movb	-12(%ebp),%dl
-	movw	$969,%ax
-	call	VIDEO_$$_OUTB$WORD$BYTE
-# [63] OutB($3C9, b);
-	movb	-16(%ebp),%dl
-	movw	$969,%ax
-	call	VIDEO_$$_OUTB$WORD$BYTE
-	cmpl	$15,-4(%ebp)
-	jge	.Lj9
-	jmp	.Lj7
 .Lj9:
-# [65] for i := 0 to 215 do
-	movl	$-1,-4(%ebp)
-	.balign 8,0x90
-.Lj14:
 	movl	-4(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-4(%ebp)
-# [67] r := (i div 36) * 51 div 4;
+# [87] PalR[i] := BClr[i][0];
+	movl	-4(%ebp),%edx
+	movl	-4(%ebp),%eax
+	leal	(%eax,%eax,2),%eax
+	movb	-56(%ebp,%eax),%al
+	movb	%al,U_$VIDEO_$$_PALR(,%edx,1)
+# [88] PalG[i] := BClr[i][1];
+	movl	-4(%ebp),%edx
+	movl	-4(%ebp),%eax
+	leal	(%eax,%eax,2),%eax
+	movb	-55(%ebp,%eax),%al
+	movb	%al,U_$VIDEO_$$_PALG(,%edx,1)
+# [89] PalB[i] := BClr[i][2];
+	movl	-4(%ebp),%edx
+	movl	-4(%ebp),%eax
+	leal	(%eax,%eax,2),%eax
+	movb	-54(%ebp,%eax),%al
+	movb	%al,U_$VIDEO_$$_PALB(,%edx,1)
+	cmpl	$14,-4(%ebp)
+	jge	.Lj11
+	jmp	.Lj9
+.Lj11:
+# [91] PalR[15] := 255; PalG[15] := 255; PalB[15] := 255;
+	movb	$255,U_$VIDEO_$$_PALR+15
+	movb	$255,U_$VIDEO_$$_PALG+15
+	movb	$255,U_$VIDEO_$$_PALB+15
+# [94] for i := 0 to 215 do
+	movl	$-1,-4(%ebp)
+	.balign 8,0x90
+.Lj12:
+	movl	-4(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-4(%ebp)
+# [96] lvl := (i div 36) * 51;
 	movl	-4(%ebp),%ecx
 	movl	$954437177,%eax
 	imull	%ecx
@@ -120,13 +174,13 @@ VIDEO_$$_VIDEOINIT:
 	shrl	$31,%ecx
 	addl	%ecx,%edx
 	imull	$51,%edx
-	movl	%edx,%eax
-	sarl	$31,%eax
-	andl	$3,%eax
-	addl	%eax,%edx
-	sarl	$2,%edx
-	movb	%dl,-8(%ebp)
-# [68] g := ((i mod 36) div 6) * 51 div 4;
+	movl	%edx,-8(%ebp)
+# [97] PalR[16 + i] := Byte(lvl);
+	movl	-4(%ebp),%eax
+	leal	16(%eax),%eax
+	movb	-8(%ebp),%dl
+	movb	%dl,U_$VIDEO_$$_PALR(,%eax,1)
+# [98] lvl := ((i mod 36) div 6) * 51;
 	movl	-4(%ebp),%eax
 	cltd
 	movl	$36,%ecx
@@ -137,41 +191,106 @@ VIDEO_$$_VIDEOINIT:
 	shrl	$31,%ecx
 	addl	%ecx,%edx
 	imull	$51,%edx
-	movl	%edx,%eax
-	sarl	$31,%eax
-	andl	$3,%eax
-	addl	%eax,%edx
-	sarl	$2,%edx
-	movb	%dl,-12(%ebp)
-# [69] b := (i mod 6) * 51 div 4;
+	movl	%edx,-8(%ebp)
+# [99] PalG[16 + i] := Byte(lvl);
+	movl	-4(%ebp),%eax
+	leal	16(%eax),%eax
+	movb	-8(%ebp),%dl
+	movb	%dl,U_$VIDEO_$$_PALG(,%eax,1)
+# [100] lvl := (i mod 6) * 51;
 	movl	-4(%ebp),%eax
 	cltd
 	movl	$6,%ecx
 	idivl	%ecx
 	imull	$51,%edx
-	movl	%edx,%eax
-	sarl	$31,%eax
-	andl	$3,%eax
-	addl	%eax,%edx
-	sarl	$2,%edx
-	movb	%dl,-16(%ebp)
-# [70] OutB($3C9, r);
+	movl	%edx,-8(%ebp)
+# [101] PalB[16 + i] := Byte(lvl);
+	movl	-4(%ebp),%eax
+	leal	16(%eax),%eax
 	movb	-8(%ebp),%dl
-	movw	$969,%ax
-	call	VIDEO_$$_OUTB$WORD$BYTE
-# [71] OutB($3C9, g);
-	movb	-12(%ebp),%dl
-	movw	$969,%ax
-	call	VIDEO_$$_OUTB$WORD$BYTE
-# [72] OutB($3C9, b);
-	movb	-16(%ebp),%dl
-	movw	$969,%ax
-	call	VIDEO_$$_OUTB$WORD$BYTE
+	movb	%dl,U_$VIDEO_$$_PALB(,%eax,1)
 	cmpl	$215,-4(%ebp)
-	jge	.Lj16
-	jmp	.Lj14
-.Lj16:
-# [74] end;
+	jge	.Lj14
+	jmp	.Lj12
+.Lj14:
+# [105] for i := 0 to 23 do
+	movl	$-1,-4(%ebp)
+	.balign 8,0x90
+.Lj15:
+	movl	-4(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-4(%ebp)
+# [107] lvl := i * 11;
+	movl	-4(%ebp),%eax
+	imull	$11,%eax,%eax
+	movl	%eax,-8(%ebp)
+# [108] if lvl > 255 then lvl := 255;
+	cmpl	$255,-8(%ebp)
+	jg	.Lj18
+	jmp	.Lj19
+.Lj18:
+	movl	$255,-8(%ebp)
+	.balign 4,0x90
+.Lj19:
+# [109] PalR[232 + i] := Byte(lvl);
+	movl	-4(%ebp),%eax
+	leal	232(%eax),%eax
+	movb	-8(%ebp),%dl
+	movb	%dl,U_$VIDEO_$$_PALR(,%eax,1)
+# [110] PalG[232 + i] := Byte(lvl);
+	movl	-4(%ebp),%eax
+	leal	232(%eax),%eax
+	movb	-8(%ebp),%dl
+	movb	%dl,U_$VIDEO_$$_PALG(,%eax,1)
+# [111] PalB[232 + i] := Byte(lvl);
+	movl	-4(%ebp),%eax
+	leal	232(%eax),%eax
+	movb	-8(%ebp),%dl
+	movb	%dl,U_$VIDEO_$$_PALB(,%eax,1)
+	cmpl	$23,-4(%ebp)
+	jge	.Lj17
+	jmp	.Lj15
+.Lj17:
+# [113] end;
+	movl	%ebp,%esp
+	popl	%ebp
+	ret
+
+.section .text.n_video_$$_videoinit,"x"
+	.balign 16,0x90
+.globl	VIDEO_$$_VIDEOINIT
+VIDEO_$$_VIDEOINIT:
+# [116] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+# [117] Framebuffer := PByte(PLongWord($1000)^);
+	movl	4096,%eax
+	movl	%eax,U_$VIDEO_$$_FRAMEBUFFER
+# [118] RWidth := Integer(PWord($1004)^);
+	movzwl	4100,%eax
+	movl	%eax,U_$VIDEO_$$_RWIDTH
+# [119] RHeight := Integer(PWord($1006)^);
+	movzwl	4102,%eax
+	movl	%eax,U_$VIDEO_$$_RHEIGHT
+# [120] VPitch := Integer(PWord($1008)^);
+	movzwl	4104,%eax
+	movl	%eax,U_$VIDEO_$$_VPITCH
+# [121] if VPitch < RWidth * BPP then
+	movl	U_$VIDEO_$$_RWIDTH,%eax
+	shll	$2,%eax
+	cmpl	U_$VIDEO_$$_VPITCH,%eax
+	jg	.Lj22
+	jmp	.Lj23
+.Lj22:
+# [122] VPitch := RWidth * BPP;
+	movl	U_$VIDEO_$$_RWIDTH,%eax
+	shll	$2,%eax
+	movl	%eax,U_$VIDEO_$$_VPITCH
+	.balign 4,0x90
+.Lj23:
+# [123] InitPalette;
+	call	VIDEO_$$_INITPALETTE
+# [124] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
@@ -180,7 +299,7 @@ VIDEO_$$_VIDEOINIT:
 	.balign 16,0x90
 .globl	VIDEO_$$_PUTPIXEL$LONGINT$LONGINT$BYTE
 VIDEO_$$_PUTPIXEL$LONGINT$LONGINT$BYTE:
-# [77] begin
+# [127] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-12(%esp),%esp
@@ -190,29 +309,214 @@ VIDEO_$$_PUTPIXEL$LONGINT$LONGINT$BYTE:
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movb	%cl,-12(%ebp)
-# [78] Framebuffer[(Y * RWidth) + X] := Color;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%edx
+# [128] PLongWord(PByte(Framebuffer) + Y * VPitch + X * BPP)^ := PalColor(Color);
+	movb	-12(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
 	movl	-8(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%eax
-	imull	%ecx,%eax
-	addl	-4(%ebp),%eax
-	movb	-12(%ebp),%cl
-	movb	%cl,(%edx,%eax,1)
-# [79] end;
+	movl	U_$VIDEO_$$_VPITCH,%edx
+	imull	%ecx,%edx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%edx
+	movl	-4(%ebp),%ecx
+	shll	$2,%ecx
+	leal	(%edx,%ecx),%edx
+	movl	%eax,(%edx)
+# [129] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
+
+.section .text.n_video_$$_drawline$longint$longint$longint$longint$byte,"x"
+	.balign 16,0x90
+.globl	VIDEO_$$_DRAWLINE$LONGINT$LONGINT$LONGINT$LONGINT$BYTE
+VIDEO_$$_DRAWLINE$LONGINT$LONGINT$LONGINT$LONGINT$BYTE:
+# [137] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+	leal	-40(%esp),%esp
+# Var X0 located at ebp-4, size=OS_S32
+# Var Y0 located at ebp-8, size=OS_S32
+# Var X1 located at ebp-12, size=OS_S32
+# Var Y1 located at ebp+12, size=OS_S32
+# Var Color located at ebp+8, size=OS_8
+# Var DX located at ebp-16, size=OS_S32
+# Var DY located at ebp-20, size=OS_S32
+# Var SX located at ebp-24, size=OS_S32
+# Var SY located at ebp-28, size=OS_S32
+# Var Err located at ebp-32, size=OS_S32
+# Var E2 located at ebp-36, size=OS_S32
+# Var Pix located at ebp-40, size=OS_32
+	movl	%eax,-4(%ebp)
+	movl	%edx,-8(%ebp)
+	movl	%ecx,-12(%ebp)
+# [138] DX := X1 - X0;
+	movl	-12(%ebp),%eax
+	movl	-4(%ebp),%edx
+	subl	%edx,%eax
+	movl	%eax,-16(%ebp)
+# [139] if DX < 0 then DX := -DX;
+	cmpl	$0,-16(%ebp)
+	jl	.Lj28
+	jmp	.Lj29
+.Lj28:
+	movl	-16(%ebp),%eax
+	negl	%eax
+	movl	%eax,-16(%ebp)
+	.balign 4,0x90
+.Lj29:
+# [140] DY := Y1 - Y0;
+	movl	12(%ebp),%eax
+	movl	-8(%ebp),%edx
+	subl	%edx,%eax
+	movl	%eax,-20(%ebp)
+# [141] if DY < 0 then DY := -DY;
+	cmpl	$0,-20(%ebp)
+	jl	.Lj30
+	jmp	.Lj31
+.Lj30:
+	movl	-20(%ebp),%eax
+	negl	%eax
+	movl	%eax,-20(%ebp)
+	.balign 4,0x90
+.Lj31:
+# [142] if X0 < X1 then SX := 1 else SX := -1;
+	movl	-4(%ebp),%eax
+	cmpl	-12(%ebp),%eax
+	jl	.Lj32
+	jmp	.Lj33
+.Lj32:
+	movl	$1,-24(%ebp)
+	jmp	.Lj34
+.Lj33:
+	movl	$-1,-24(%ebp)
+.Lj34:
+# [143] if Y0 < Y1 then SY := 1 else SY := -1;
+	movl	-8(%ebp),%eax
+	cmpl	12(%ebp),%eax
+	jl	.Lj35
+	jmp	.Lj36
+.Lj35:
+	movl	$1,-28(%ebp)
+	jmp	.Lj37
+.Lj36:
+	movl	$-1,-28(%ebp)
+.Lj37:
+# [144] Err := DX - DY;
+	movl	-16(%ebp),%eax
+	movl	-20(%ebp),%edx
+	subl	%edx,%eax
+	movl	%eax,-32(%ebp)
+# [145] Pix := PalColor(Color);
+	movb	8(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	%eax,-40(%ebp)
+# [146] while True do
+	jmp	.Lj39
+	.balign 8,0x90
+.Lj38:
+# [148] if (X0 >= 0) and (X0 < RWidth) and (Y0 >= 0) and (Y0 < RHeight) then
+	cmpl	$0,-4(%ebp)
+	jge	.Lj41
+	jmp	.Lj42
+.Lj41:
+	movl	-4(%ebp),%eax
+	cmpl	U_$VIDEO_$$_RWIDTH,%eax
+	jl	.Lj43
+	jmp	.Lj42
+.Lj43:
+	cmpl	$0,-8(%ebp)
+	jge	.Lj44
+	jmp	.Lj42
+.Lj44:
+	movl	-8(%ebp),%eax
+	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
+	jl	.Lj45
+	jmp	.Lj42
+.Lj45:
+# [149] PLongWord(PByte(Framebuffer) + Y0 * VPitch + X0 * BPP)^ := Pix;
+	movl	-8(%ebp),%edx
+	movl	U_$VIDEO_$$_VPITCH,%eax
+	imull	%edx,%eax
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%eax
+	movl	-4(%ebp),%edx
+	shll	$2,%edx
+	leal	(%eax,%edx),%eax
+	movl	-40(%ebp),%edx
+	movl	%edx,(%eax)
+	.balign 4,0x90
+.Lj42:
+# [150] if (X0 = X1) and (Y0 = Y1) then
+	movl	-4(%ebp),%eax
+	cmpl	-12(%ebp),%eax
+	je	.Lj46
+	jmp	.Lj47
+.Lj46:
+	movl	-8(%ebp),%eax
+	cmpl	12(%ebp),%eax
+	je	.Lj48
+	jmp	.Lj47
+.Lj48:
+# [151] Break;
+	jmp	.Lj40
+	.balign 4,0x90
+.Lj47:
+# [152] E2 := 2 * Err;
+	movl	-32(%ebp),%eax
+	shll	$1,%eax
+	movl	%eax,-36(%ebp)
+# [153] if E2 > -DY then
+	movl	-20(%ebp),%eax
+	negl	%eax
+	cmpl	-36(%ebp),%eax
+	jl	.Lj49
+	jmp	.Lj50
+.Lj49:
+# [155] Err := Err - DY;
+	movl	-32(%ebp),%eax
+	movl	-20(%ebp),%edx
+	subl	%edx,%eax
+	movl	%eax,-32(%ebp)
+# [156] X0 := X0 + SX;
+	movl	-4(%ebp),%eax
+	movl	-24(%ebp),%edx
+	leal	(%eax,%edx),%eax
+	movl	%eax,-4(%ebp)
+	.balign 4,0x90
+.Lj50:
+# [158] if E2 < DX then
+	movl	-36(%ebp),%eax
+	cmpl	-16(%ebp),%eax
+	jl	.Lj51
+	jmp	.Lj52
+.Lj51:
+# [160] Err := Err + DX;
+	movl	-32(%ebp),%eax
+	movl	-16(%ebp),%edx
+	leal	(%eax,%edx),%eax
+	movl	%eax,-32(%ebp)
+# [161] Y0 := Y0 + SY;
+	movl	-8(%ebp),%eax
+	movl	-28(%ebp),%edx
+	leal	(%eax,%edx),%eax
+	movl	%eax,-8(%ebp)
+	.balign 4,0x90
+.Lj52:
+.Lj39:
+	jmp	.Lj38
+.Lj40:
+# [164] end;
+	movl	%ebp,%esp
+	popl	%ebp
+	ret	$8
 
 .section .text.n_video_$$_fillrect$longint$longint$longint$longint$byte,"x"
 	.balign 16,0x90
 .globl	VIDEO_$$_FILLRECT$LONGINT$LONGINT$LONGINT$LONGINT$BYTE
 VIDEO_$$_FILLRECT$LONGINT$LONGINT$LONGINT$LONGINT$BYTE:
-# [84] begin
+# [170] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-20(%esp),%esp
+	leal	-24(%esp),%esp
 	pushl	%ebx
-	pushl	%esi
 # Var X located at ebp-4, size=OS_S32
 # Var Y located at ebp-8, size=OS_S32
 # Var W located at ebp-12, size=OS_S32
@@ -220,89 +524,95 @@ VIDEO_$$_FILLRECT$LONGINT$LONGINT$LONGINT$LONGINT$BYTE:
 # Var Color located at ebp+8, size=OS_8
 # Var YY located at ebp-16, size=OS_S32
 # Var XX located at ebp-20, size=OS_S32
+# Var Pix located at ebp-24, size=OS_32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movl	%ecx,-12(%ebp)
-# [85] for YY := Y to Y + H - 1 do
+# [171] Pix := PalColor(Color);
+	movb	8(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	%eax,-24(%ebp)
+# [172] for YY := Y to Y + H - 1 do
 	movl	-8(%ebp),%eax
 	movl	12(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	subl	$1,%eax
 	cmpl	-8(%ebp),%eax
-	jge	.Lj21
-	jmp	.Lj22
-.Lj21:
+	jge	.Lj55
+	jmp	.Lj56
+.Lj55:
 	movl	-8(%ebp),%edx
 	leal	-1(%edx),%edx
 	movl	%edx,-16(%ebp)
 	.balign 8,0x90
-.Lj23:
+.Lj57:
 	movl	-16(%ebp),%edx
 	leal	1(%edx),%edx
 	movl	%edx,-16(%ebp)
-# [86] if (YY >= 0) and (YY < RHeight) then
+# [173] if (YY >= 0) and (YY < RHeight) then
 	cmpl	$0,-16(%ebp)
-	jge	.Lj26
-	jmp	.Lj27
-.Lj26:
+	jge	.Lj60
+	jmp	.Lj61
+.Lj60:
 	movl	-16(%ebp),%edx
 	cmpl	U_$VIDEO_$$_RHEIGHT,%edx
-	jl	.Lj28
-	jmp	.Lj27
-.Lj28:
-# [87] for XX := X to X + W - 1 do
+	jl	.Lj62
+	jmp	.Lj61
+.Lj62:
+# [174] for XX := X to X + W - 1 do
 	movl	-4(%ebp),%edx
 	movl	-12(%ebp),%ecx
 	leal	(%edx,%ecx),%edx
 	subl	$1,%edx
 	cmpl	-4(%ebp),%edx
-	jge	.Lj29
-	jmp	.Lj30
-.Lj29:
+	jge	.Lj63
+	jmp	.Lj64
+.Lj63:
 	movl	-4(%ebp),%ecx
 	leal	-1(%ecx),%ecx
 	movl	%ecx,-20(%ebp)
 	.balign 8,0x90
-.Lj31:
+.Lj65:
 	movl	-20(%ebp),%ecx
 	leal	1(%ecx),%ecx
 	movl	%ecx,-20(%ebp)
-# [88] if (XX >= 0) and (XX < RWidth) then
+# [175] if (XX >= 0) and (XX < RWidth) then
 	cmpl	$0,-20(%ebp)
-	jge	.Lj34
-	jmp	.Lj35
-.Lj34:
+	jge	.Lj68
+	jmp	.Lj69
+.Lj68:
 	movl	-20(%ebp),%ecx
 	cmpl	U_$VIDEO_$$_RWIDTH,%ecx
-	jl	.Lj36
-	jmp	.Lj35
-.Lj36:
-# [89] Framebuffer[YY * RWidth + XX] := Color;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%esi
-	movl	-16(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%ebx
-	imull	%ecx,%ebx
-	addl	-20(%ebp),%ebx
-	movb	8(%ebp),%cl
-	movb	%cl,(%esi,%ebx,1)
+	jl	.Lj70
+	jmp	.Lj69
+.Lj70:
+# [176] PLongWord(PByte(Framebuffer) + YY * VPitch + XX * BPP)^ := Pix;
+	movl	-16(%ebp),%ebx
+	movl	U_$VIDEO_$$_VPITCH,%ecx
+	imull	%ebx,%ecx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%ecx
+	movl	-20(%ebp),%ebx
+	shll	$2,%ebx
+	leal	(%ecx,%ebx),%ebx
+	movl	-24(%ebp),%ecx
+	movl	%ecx,(%ebx)
 	.balign 4,0x90
-.Lj35:
+.Lj69:
 	cmpl	-20(%ebp),%edx
-	jle	.Lj33
-	jmp	.Lj31
-.Lj33:
+	jle	.Lj67
+	jmp	.Lj65
+.Lj67:
 	.balign 4,0x90
-.Lj30:
+.Lj64:
 	.balign 4,0x90
-.Lj27:
+.Lj61:
 	cmpl	-16(%ebp),%eax
-	jle	.Lj25
-	jmp	.Lj23
-.Lj25:
+	jle	.Lj59
+	jmp	.Lj57
+.Lj59:
 	.balign 4,0x90
-.Lj22:
-# [90] end;
-	popl	%esi
+.Lj56:
+# [177] end;
 	popl	%ebx
 	movl	%ebp,%esp
 	popl	%ebp
@@ -312,42 +622,50 @@ VIDEO_$$_FILLRECT$LONGINT$LONGINT$LONGINT$LONGINT$BYTE:
 	.balign 16,0x90
 .globl	VIDEO_$$_CLEARSCREEN$BYTE
 VIDEO_$$_CLEARSCREEN$BYTE:
-# [95] begin
+# [184] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-8(%esp),%esp
-	pushl	%ebx
+	leal	-16(%esp),%esp
 # Var Color located at ebp-4, size=OS_8
 # Var i located at ebp-8, size=OS_S32
+# Var Pix located at ebp-12, size=OS_32
+# Var P located at ebp-16, size=OS_32
 	movb	%al,-4(%ebp)
-# [96] for i := 0 to (RWidth * RHeight) - 1 do
+# [185] Pix := PalColor(Color);
+	movb	-4(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	%eax,-12(%ebp)
+# [186] P := Framebuffer;
+	movl	U_$VIDEO_$$_FRAMEBUFFER,%eax
+	movl	%eax,-16(%ebp)
+# [187] for i := 0 to (RWidth * RHeight) - 1 do
 	movl	U_$VIDEO_$$_RWIDTH,%edx
 	movl	U_$VIDEO_$$_RHEIGHT,%eax
 	imull	%edx,%eax
 	subl	$1,%eax
 	cmpl	$0,%eax
-	jge	.Lj39
-	jmp	.Lj40
-.Lj39:
+	jge	.Lj73
+	jmp	.Lj74
+.Lj73:
 	movl	$-1,-8(%ebp)
 	.balign 8,0x90
-.Lj41:
+.Lj75:
 	movl	-8(%ebp),%edx
 	leal	1(%edx),%edx
 	movl	%edx,-8(%ebp)
-# [98] Framebuffer[i] := Color;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%ecx
-	movl	-8(%ebp),%ebx
-	movb	-4(%ebp),%dl
-	movb	%dl,(%ecx,%ebx,1)
+# [189] PLongWord(P)^ := Pix;
+	movl	-16(%ebp),%edx
+	movl	-12(%ebp),%ecx
+	movl	%ecx,(%edx)
+# [190] Inc(P, BPP);
+	addl	$4,-16(%ebp)
 	cmpl	-8(%ebp),%eax
-	jle	.Lj43
-	jmp	.Lj41
-.Lj43:
+	jle	.Lj77
+	jmp	.Lj75
+.Lj77:
 	.balign 4,0x90
-.Lj40:
-# [100] end;
-	popl	%ebx
+.Lj74:
+# [192] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
@@ -356,10 +674,10 @@ VIDEO_$$_CLEARSCREEN$BYTE:
 	.balign 16,0x90
 .globl	VIDEO_$$_FILLPATTERN8X8$array_of_BYTE$BYTE$BYTE
 VIDEO_$$_FILLPATTERN8X8$array_of_BYTE$BYTE$BYTE:
-# [105] begin
+# [199] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-20(%esp),%esp
+	leal	-28(%esp),%esp
 	pushl	%ebx
 	pushl	%esi
 # Var Pattern located at ebp-4, size=OS_32
@@ -368,81 +686,87 @@ VIDEO_$$_FILLPATTERN8X8$array_of_BYTE$BYTE$BYTE:
 # Var $highPATTERN located at ebp-12, size=OS_S32
 # Var Y located at ebp-16, size=OS_S32
 # Var X located at ebp-20, size=OS_S32
+# Var P located at ebp-24, size=OS_32
+# Var Pix located at ebp-28, size=OS_32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-12(%ebp)
 	movb	%cl,-8(%ebp)
-# [106] for Y := 0 to RHeight - 1 do
+# [200] for Y := 0 to RHeight - 1 do
 	movl	U_$VIDEO_$$_RHEIGHT,%eax
-	leal	-1(%eax),%eax
-	cmpl	$0,%eax
-	jge	.Lj46
-	jmp	.Lj47
-.Lj46:
+	leal	-1(%eax),%ebx
+	cmpl	$0,%ebx
+	jge	.Lj80
+	jmp	.Lj81
+.Lj80:
 	movl	$-1,-16(%ebp)
 	.balign 8,0x90
-.Lj48:
+.Lj82:
+	movl	-16(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-16(%ebp)
+# [202] P := PByte(Framebuffer) + Y * VPitch;
 	movl	-16(%ebp),%edx
-	leal	1(%edx),%edx
-	movl	%edx,-16(%ebp)
-# [108] for X := 0 to RWidth - 1 do
-	movl	U_$VIDEO_$$_RWIDTH,%edx
-	leal	-1(%edx),%edx
-	cmpl	$0,%edx
-	jge	.Lj51
-	jmp	.Lj52
-.Lj51:
+	movl	U_$VIDEO_$$_VPITCH,%eax
+	imull	%edx,%eax
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%eax
+	movl	%eax,-24(%ebp)
+# [203] for X := 0 to RWidth - 1 do
+	movl	U_$VIDEO_$$_RWIDTH,%eax
+	leal	-1(%eax),%esi
+	cmpl	$0,%esi
+	jge	.Lj85
+	jmp	.Lj86
+.Lj85:
 	movl	$-1,-20(%ebp)
 	.balign 8,0x90
-.Lj53:
+.Lj87:
+	movl	-20(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-20(%ebp)
+# [205] if (Pattern[Y and 7] and ($80 shr (X and 7))) <> 0 then
+	movl	-4(%ebp),%edx
+	movl	-16(%ebp),%eax
+	andl	$7,%eax
+	movzbl	(%edx,%eax,1),%eax
 	movl	-20(%ebp),%ecx
-	leal	1(%ecx),%ecx
-	movl	%ecx,-20(%ebp)
-# [110] if (Pattern[Y and 7] and ($80 shr (X and 7))) <> 0 then
-	movl	-4(%ebp),%ebx
-	movl	-16(%ebp),%ecx
 	andl	$7,%ecx
-	movzbl	(%ebx,%ecx,1),%ebx
-	movl	-20(%ebp),%ecx
-	andl	$7,%ecx
-	movl	$128,%esi
-	shrl	%cl,%esi
-	andl	%esi,%ebx
-	testl	$-1,%ebx
-	jne	.Lj56
-	jmp	.Lj57
-.Lj56:
-# [111] Framebuffer[Y * RWidth + X] := On
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%esi
-	movl	-16(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%ebx
-	imull	%ecx,%ebx
-	addl	-20(%ebp),%ebx
-	movb	-8(%ebp),%cl
-	movb	%cl,(%esi,%ebx,1)
-	jmp	.Lj58
-.Lj57:
-# [113] Framebuffer[Y * RWidth + X] := Off;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%esi
-	movl	-16(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%ebx
-	imull	%ecx,%ebx
-	addl	-20(%ebp),%ebx
-	movb	8(%ebp),%cl
-	movb	%cl,(%esi,%ebx,1)
-.Lj58:
-	cmpl	-20(%ebp),%edx
-	jle	.Lj55
-	jmp	.Lj53
-.Lj55:
+	movl	$128,%edx
+	shrl	%cl,%edx
+	andl	%edx,%eax
+	testl	$-1,%eax
+	jne	.Lj90
+	jmp	.Lj91
+.Lj90:
+# [206] Pix := PalColor(On)
+	movb	-8(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	%eax,-28(%ebp)
+	jmp	.Lj92
+.Lj91:
+# [208] Pix := PalColor(Off);
+	movb	8(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	%eax,-28(%ebp)
+.Lj92:
+# [209] PLongWord(P)^ := Pix;
+	movl	-24(%ebp),%edx
+	movl	-28(%ebp),%eax
+	movl	%eax,(%edx)
+# [210] Inc(P, BPP);
+	addl	$4,-24(%ebp)
+	cmpl	-20(%ebp),%esi
+	jle	.Lj89
+	jmp	.Lj87
+.Lj89:
 	.balign 4,0x90
-.Lj52:
-	cmpl	-16(%ebp),%eax
-	jle	.Lj50
-	jmp	.Lj48
-.Lj50:
+.Lj86:
+	cmpl	-16(%ebp),%ebx
+	jle	.Lj84
+	jmp	.Lj82
+.Lj84:
 	.balign 4,0x90
-.Lj47:
-# [116] end;
+.Lj81:
+# [213] end;
 	popl	%esi
 	popl	%ebx
 	movl	%ebp,%esp
@@ -453,7 +777,7 @@ VIDEO_$$_FILLPATTERN8X8$array_of_BYTE$BYTE$BYTE:
 	.balign 16,0x90
 .globl	VIDEO_$$_FILLPATTERNRECT$LONGINT$LONGINT$LONGINT$LONGINT$array_of_BYTE$BYTE$BYTE
 VIDEO_$$_FILLPATTERNRECT$LONGINT$LONGINT$LONGINT$LONGINT$array_of_BYTE$BYTE$BYTE:
-# [121] begin
+# [218] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-20(%esp),%esp
@@ -472,110 +796,116 @@ VIDEO_$$_FILLPATTERNRECT$LONGINT$LONGINT$LONGINT$LONGINT$array_of_BYTE$BYTE$BYTE
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movl	%ecx,-12(%ebp)
-# [122] for YY := Y to Y + H - 1 do
+# [219] for YY := Y to Y + H - 1 do
 	movl	-8(%ebp),%eax
 	movl	24(%ebp),%edx
-	leal	(%eax,%edx),%eax
-	subl	$1,%eax
-	cmpl	-8(%ebp),%eax
-	jge	.Lj61
-	jmp	.Lj62
-.Lj61:
-	movl	-8(%ebp),%edx
-	leal	-1(%edx),%edx
-	movl	%edx,-16(%ebp)
+	leal	(%eax,%edx),%ebx
+	subl	$1,%ebx
+	cmpl	-8(%ebp),%ebx
+	jge	.Lj95
+	jmp	.Lj96
+.Lj95:
+	movl	-8(%ebp),%eax
+	leal	-1(%eax),%eax
+	movl	%eax,-16(%ebp)
 	.balign 8,0x90
-.Lj63:
-	movl	-16(%ebp),%edx
-	leal	1(%edx),%edx
-	movl	%edx,-16(%ebp)
-# [123] if (YY >= 0) and (YY < RHeight) then
+.Lj97:
+	movl	-16(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-16(%ebp)
+# [220] if (YY >= 0) and (YY < RHeight) then
 	cmpl	$0,-16(%ebp)
-	jge	.Lj66
-	jmp	.Lj67
-.Lj66:
-	movl	-16(%ebp),%edx
-	cmpl	U_$VIDEO_$$_RHEIGHT,%edx
-	jl	.Lj68
-	jmp	.Lj67
-.Lj68:
-# [124] for XX := X to X + W - 1 do
-	movl	-4(%ebp),%edx
-	movl	-12(%ebp),%ecx
-	leal	(%edx,%ecx),%edx
-	subl	$1,%edx
-	cmpl	-4(%ebp),%edx
-	jge	.Lj69
-	jmp	.Lj70
-.Lj69:
-	movl	-4(%ebp),%ecx
-	leal	-1(%ecx),%ecx
-	movl	%ecx,-20(%ebp)
+	jge	.Lj100
+	jmp	.Lj101
+.Lj100:
+	movl	-16(%ebp),%eax
+	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
+	jl	.Lj102
+	jmp	.Lj101
+.Lj102:
+# [221] for XX := X to X + W - 1 do
+	movl	-4(%ebp),%eax
+	movl	-12(%ebp),%edx
+	leal	(%eax,%edx),%esi
+	subl	$1,%esi
+	cmpl	-4(%ebp),%esi
+	jge	.Lj103
+	jmp	.Lj104
+.Lj103:
+	movl	-4(%ebp),%eax
+	leal	-1(%eax),%eax
+	movl	%eax,-20(%ebp)
 	.balign 8,0x90
-.Lj71:
-	movl	-20(%ebp),%ecx
-	leal	1(%ecx),%ecx
-	movl	%ecx,-20(%ebp)
-# [125] if (XX >= 0) and (XX < RWidth) then
+.Lj105:
+	movl	-20(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-20(%ebp)
+# [222] if (XX >= 0) and (XX < RWidth) then
 	cmpl	$0,-20(%ebp)
-	jge	.Lj74
-	jmp	.Lj75
-.Lj74:
+	jge	.Lj108
+	jmp	.Lj109
+.Lj108:
+	movl	-20(%ebp),%eax
+	cmpl	U_$VIDEO_$$_RWIDTH,%eax
+	jl	.Lj110
+	jmp	.Lj109
+.Lj110:
+# [223] if (Pattern[YY and 7] and ($80 shr (XX and 7))) <> 0 then
+	movl	20(%ebp),%edx
+	movl	-16(%ebp),%eax
+	andl	$7,%eax
+	movzbl	(%edx,%eax,1),%eax
 	movl	-20(%ebp),%ecx
-	cmpl	U_$VIDEO_$$_RWIDTH,%ecx
-	jl	.Lj76
-	jmp	.Lj75
-.Lj76:
-# [126] if (Pattern[YY and 7] and ($80 shr (XX and 7))) <> 0 then
-	movl	20(%ebp),%ebx
-	movl	-16(%ebp),%ecx
 	andl	$7,%ecx
-	movzbl	(%ebx,%ecx,1),%ebx
+	movl	$128,%edx
+	shrl	%cl,%edx
+	andl	%edx,%eax
+	testl	$-1,%eax
+	jne	.Lj111
+	jmp	.Lj112
+.Lj111:
+# [224] PLongWord(PByte(Framebuffer) + YY * VPitch + XX * BPP)^ := PalColor(On)
+	movb	12(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	-16(%ebp),%ecx
+	movl	U_$VIDEO_$$_VPITCH,%edx
+	imull	%ecx,%edx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%edx
 	movl	-20(%ebp),%ecx
-	andl	$7,%ecx
-	movl	$128,%esi
-	shrl	%cl,%esi
-	andl	%esi,%ebx
-	testl	$-1,%ebx
-	jne	.Lj77
-	jmp	.Lj78
-.Lj77:
-# [127] Framebuffer[YY * RWidth + XX] := On
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%esi
+	shll	$2,%ecx
+	leal	(%edx,%ecx),%edx
+	movl	%eax,(%edx)
+	jmp	.Lj113
+.Lj112:
+# [226] PLongWord(PByte(Framebuffer) + YY * VPitch + XX * BPP)^ := PalColor(Off);
+	movb	8(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
 	movl	-16(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%ebx
-	imull	%ecx,%ebx
-	addl	-20(%ebp),%ebx
-	movb	12(%ebp),%cl
-	movb	%cl,(%esi,%ebx,1)
-	jmp	.Lj79
-.Lj78:
-# [129] Framebuffer[YY * RWidth + XX] := Off;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%esi
-	movl	-16(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%ebx
-	imull	%ecx,%ebx
-	addl	-20(%ebp),%ebx
-	movb	8(%ebp),%cl
-	movb	%cl,(%esi,%ebx,1)
-.Lj79:
+	movl	U_$VIDEO_$$_VPITCH,%edx
+	imull	%ecx,%edx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%edx
+	movl	-20(%ebp),%ecx
+	shll	$2,%ecx
+	leal	(%edx,%ecx),%edx
+	movl	%eax,(%edx)
+.Lj113:
 	.balign 4,0x90
-.Lj75:
-	cmpl	-20(%ebp),%edx
-	jle	.Lj73
-	jmp	.Lj71
-.Lj73:
+.Lj109:
+	cmpl	-20(%ebp),%esi
+	jle	.Lj107
+	jmp	.Lj105
+.Lj107:
 	.balign 4,0x90
-.Lj70:
+.Lj104:
 	.balign 4,0x90
-.Lj67:
-	cmpl	-16(%ebp),%eax
-	jle	.Lj65
-	jmp	.Lj63
-.Lj65:
+.Lj101:
+	cmpl	-16(%ebp),%ebx
+	jle	.Lj99
+	jmp	.Lj97
+.Lj99:
 	.balign 4,0x90
-.Lj62:
-# [130] end;
+.Lj96:
+# [227] end;
 	popl	%esi
 	popl	%ebx
 	movl	%ebp,%esp
@@ -585,10 +915,10 @@ VIDEO_$$_FILLPATTERNRECT$LONGINT$LONGINT$LONGINT$LONGINT$array_of_BYTE$BYTE$BYTE
 .section .text.n_video_$$_drawcursorshape$array_of_word$longint$longint$byte,"x"
 	.balign 16,0x90
 VIDEO_$$_DRAWCURSORSHAPE$array_of_WORD$LONGINT$LONGINT$BYTE:
-# [149] begin
+# [247] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-20(%esp),%esp
+	leal	-24(%esp),%esp
 # Var Shape located at ebp-4, size=OS_32
 # Var X located at ebp-8, size=OS_S32
 # Var Y located at ebp+12, size=OS_S32
@@ -596,62 +926,67 @@ VIDEO_$$_DRAWCURSORSHAPE$array_of_WORD$LONGINT$LONGINT$BYTE:
 # Var $highSHAPE located at ebp-12, size=OS_S32
 # Var R located at ebp-16, size=OS_S32
 # Var C located at ebp-20, size=OS_S32
+# Var Pix located at ebp-24, size=OS_32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-12(%ebp)
 	movl	%ecx,-8(%ebp)
-# [150] for R := 0 to 15 do
+# [248] Pix := PalColor(Color);
+	movb	8(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	%eax,-24(%ebp)
+# [249] for R := 0 to 15 do
 	movl	$-1,-16(%ebp)
 	.balign 8,0x90
-.Lj82:
+.Lj116:
 	movl	-16(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-16(%ebp)
-# [152] if (Y + R < 0) or (Y + R >= RHeight) then
+# [251] if (Y + R < 0) or (Y + R >= RHeight) then
 	movl	12(%ebp),%eax
 	movl	-16(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	cmpl	$0,%eax
-	jl	.Lj85
-	jmp	.Lj86
-.Lj86:
+	jl	.Lj119
+	jmp	.Lj120
+.Lj120:
 	movl	12(%ebp),%eax
 	movl	-16(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
-	jge	.Lj85
-	jmp	.Lj87
-.Lj85:
-# [153] Continue;
-	jmp	.Lj83
+	jge	.Lj119
+	jmp	.Lj121
+.Lj119:
+# [252] Continue;
+	jmp	.Lj117
 	.balign 4,0x90
-.Lj87:
-# [154] for C := 0 to 15 do
+.Lj121:
+# [253] for C := 0 to 15 do
 	movl	$-1,-20(%ebp)
 	.balign 8,0x90
-.Lj88:
+.Lj122:
 	movl	-20(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-20(%ebp)
-# [156] if (X + C < 0) or (X + C >= RWidth) then
+# [255] if (X + C < 0) or (X + C >= RWidth) then
 	movl	-8(%ebp),%eax
 	movl	-20(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	cmpl	$0,%eax
-	jl	.Lj91
-	jmp	.Lj92
-.Lj92:
+	jl	.Lj125
+	jmp	.Lj126
+.Lj126:
 	movl	-8(%ebp),%eax
 	movl	-20(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	cmpl	U_$VIDEO_$$_RWIDTH,%eax
-	jge	.Lj91
-	jmp	.Lj93
-.Lj91:
-# [157] Continue;
-	jmp	.Lj89
+	jge	.Lj125
+	jmp	.Lj127
+.Lj125:
+# [256] Continue;
+	jmp	.Lj123
 	.balign 4,0x90
-.Lj93:
-# [158] if (Shape[R] and (1 shl (15 - C))) <> 0 then
+.Lj127:
+# [257] if (Shape[R] and (1 shl (15 - C))) <> 0 then
 	movl	-20(%ebp),%eax
 	movl	$15,%ecx
 	subl	%eax,%ecx
@@ -662,33 +997,36 @@ VIDEO_$$_DRAWCURSORSHAPE$array_of_WORD$LONGINT$LONGINT$BYTE:
 	movzwl	(%ecx,%edx,2),%edx
 	andl	%edx,%eax
 	testl	$-1,%eax
-	jne	.Lj94
-	jmp	.Lj95
-.Lj94:
-# [159] Framebuffer[(Y + R) * RWidth + X + C] := Color;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%ecx
+	jne	.Lj128
+	jmp	.Lj129
+.Lj128:
+# [258] PLongWord(PByte(Framebuffer) + (Y + R) * VPitch + (X + C) * BPP)^ := Pix;
 	movl	12(%ebp),%eax
 	movl	-16(%ebp),%edx
-	leal	(%eax,%edx),%edx
-	movl	U_$VIDEO_$$_RWIDTH,%eax
-	imull	%eax,%edx
-	addl	-8(%ebp),%edx
-	addl	-20(%ebp),%edx
-	movb	8(%ebp),%al
-	movb	%al,(%ecx,%edx,1)
+	leal	(%eax,%edx),%ecx
+	movl	U_$VIDEO_$$_VPITCH,%eax
+	imull	%eax,%ecx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%ecx
+	movl	-8(%ebp),%eax
+	movl	-20(%ebp),%edx
+	leal	(%eax,%edx),%eax
+	shll	$2,%eax
+	leal	(%ecx,%eax),%eax
+	movl	-24(%ebp),%edx
+	movl	%edx,(%eax)
 	.balign 4,0x90
-.Lj95:
-.Lj89:
+.Lj129:
+.Lj123:
 	cmpl	$15,-20(%ebp)
-	jge	.Lj90
-	jmp	.Lj88
-.Lj90:
-.Lj83:
+	jge	.Lj124
+	jmp	.Lj122
+.Lj124:
+.Lj117:
 	cmpl	$15,-16(%ebp)
-	jge	.Lj84
-	jmp	.Lj82
-.Lj84:
-# [162] end;
+	jge	.Lj118
+	jmp	.Lj116
+.Lj118:
+# [261] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret	$8
@@ -697,7 +1035,7 @@ VIDEO_$$_DRAWCURSORSHAPE$array_of_WORD$LONGINT$LONGINT$BYTE:
 	.balign 16,0x90
 .globl	VIDEO_$$_DRAWCURSOR$LONGINT$LONGINT
 VIDEO_$$_DRAWCURSOR$LONGINT$LONGINT:
-# [165] begin
+# [264] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-8(%esp),%esp
@@ -705,21 +1043,21 @@ VIDEO_$$_DRAWCURSOR$LONGINT$LONGINT:
 # Var Y located at ebp-8, size=OS_S32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
-# [166] DrawCursorShape(CursorMask, X, Y, $0F);
+# [265] DrawCursorShape(CursorMask, X, Y, $0F);
 	pushl	-8(%ebp)
 	pushl	$15
 	movl	-4(%ebp),%ecx
 	movl	$TC_$VIDEO_$$_CURSORMASK,%eax
 	movl	$15,%edx
 	call	VIDEO_$$_DRAWCURSORSHAPE$array_of_WORD$LONGINT$LONGINT$BYTE
-# [167] DrawCursorShape(CursorData, X, Y, 0);
+# [266] DrawCursorShape(CursorData, X, Y, 0);
 	pushl	-8(%ebp)
 	pushl	$0
 	movl	-4(%ebp),%ecx
 	movl	$TC_$VIDEO_$$_CURSORDATA,%eax
 	movl	$15,%edx
 	call	VIDEO_$$_DRAWCURSORSHAPE$array_of_WORD$LONGINT$LONGINT$BYTE
-# [168] end;
+# [267] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
@@ -728,7 +1066,7 @@ VIDEO_$$_DRAWCURSOR$LONGINT$LONGINT:
 	.balign 16,0x90
 .globl	VIDEO_$$_SAVECURSORAREA$LONGINT$LONGINT
 VIDEO_$$_SAVECURSORAREA$LONGINT$LONGINT:
-# [180] begin
+# [279] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-16(%esp),%esp
@@ -738,83 +1076,85 @@ VIDEO_$$_SAVECURSORAREA$LONGINT$LONGINT:
 # Var C located at ebp-16, size=OS_S32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
-# [181] for R := 0 to CursorH - 1 do
+# [280] for R := 0 to CursorH - 1 do
 	movl	$-1,-12(%ebp)
 	.balign 8,0x90
-.Lj100:
+.Lj134:
 	movl	-12(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-12(%ebp)
-# [182] for C := 0 to CursorW - 1 do
+# [281] for C := 0 to CursorW - 1 do
 	movl	$-1,-16(%ebp)
 	.balign 8,0x90
-.Lj103:
+.Lj137:
 	movl	-16(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-16(%ebp)
-# [184] if (Y - 1 + R >= 0) and (Y - 1 + R < RHeight) and
+# [283] if (Y - 1 + R >= 0) and (Y - 1 + R < RHeight) and
 	movl	-8(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-12(%ebp),%eax
 	cmpl	$0,%eax
-	jge	.Lj106
-	jmp	.Lj107
-.Lj106:
+	jge	.Lj140
+	jmp	.Lj141
+.Lj140:
 	movl	-8(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-12(%ebp),%eax
 	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
-	jl	.Lj108
-	jmp	.Lj107
-.Lj108:
-# [185] (X - 1 + C >= 0) and (X - 1 + C < RWidth) then
+	jl	.Lj142
+	jmp	.Lj141
+.Lj142:
+# [284] (X - 1 + C >= 0) and (X - 1 + C < RWidth) then
 	movl	-4(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-16(%ebp),%eax
 	cmpl	$0,%eax
-	jge	.Lj109
-	jmp	.Lj107
-.Lj109:
+	jge	.Lj143
+	jmp	.Lj141
+.Lj143:
 	movl	-4(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-16(%ebp),%eax
 	cmpl	U_$VIDEO_$$_RWIDTH,%eax
-	jl	.Lj110
-	jmp	.Lj107
-.Lj110:
-# [186] CursorBack[R * CursorW + C] := Framebuffer[(Y - 1 + R) * RWidth + (X - 1 + C)]
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%edx
+	jl	.Lj144
+	jmp	.Lj141
+.Lj144:
+# [286] (Y - 1 + R) * VPitch + (X - 1 + C) * BPP)^
 	movl	-8(%ebp),%eax
-	leal	-1(%eax),%ecx
-	addl	-12(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%eax
-	imull	%eax,%ecx
+	leal	-1(%eax),%edx
+	addl	-12(%ebp),%edx
+	movl	U_$VIDEO_$$_VPITCH,%eax
+	imull	%eax,%edx
+# [285] CursorBack[R * CursorW + C] := PLongWord(PByte(Framebuffer) +
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%edx
 	movl	-4(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-16(%ebp),%eax
-	leal	(%ecx,%eax),%ecx
+	shll	$2,%eax
+	leal	(%edx,%eax),%ecx
+	movl	-12(%ebp),%eax
+	imull	$18,%eax,%edx
+	addl	-16(%ebp),%edx
+	movl	(%ecx),%eax
+	movl	%eax,U_$VIDEO_$$_CURSORBACK(,%edx,4)
+	jmp	.Lj145
+.Lj141:
+# [288] CursorBack[R * CursorW + C] := 0;
 	movl	-12(%ebp),%eax
 	imull	$18,%eax,%eax
 	addl	-16(%ebp),%eax
-	movb	(%edx,%ecx,1),%dl
-	movb	%dl,U_$VIDEO_$$_CURSORBACK(,%eax,1)
-	jmp	.Lj111
-.Lj107:
-# [188] CursorBack[R * CursorW + C] := 0;
-	movl	-12(%ebp),%eax
-	imull	$18,%eax,%eax
-	addl	-16(%ebp),%eax
-	movb	$0,U_$VIDEO_$$_CURSORBACK(,%eax,1)
-.Lj111:
+	movl	$0,U_$VIDEO_$$_CURSORBACK(,%eax,4)
+.Lj145:
 	cmpl	$17,-16(%ebp)
-	jge	.Lj105
-	jmp	.Lj103
-.Lj105:
+	jge	.Lj139
+	jmp	.Lj137
+.Lj139:
 	cmpl	$17,-12(%ebp)
-	jge	.Lj102
-	jmp	.Lj100
-.Lj102:
-# [190] end;
+	jge	.Lj136
+	jmp	.Lj134
+.Lj136:
+# [290] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
@@ -823,7 +1163,7 @@ VIDEO_$$_SAVECURSORAREA$LONGINT$LONGINT:
 	.balign 16,0x90
 .globl	VIDEO_$$_RESTORECURSORAREA$LONGINT$LONGINT
 VIDEO_$$_RESTORECURSORAREA$LONGINT$LONGINT:
-# [195] begin
+# [295] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-16(%esp),%esp
@@ -833,291 +1173,609 @@ VIDEO_$$_RESTORECURSORAREA$LONGINT$LONGINT:
 # Var C located at ebp-16, size=OS_S32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
-# [196] for R := 0 to CursorH - 1 do
+# [296] for R := 0 to CursorH - 1 do
 	movl	$-1,-12(%ebp)
 	.balign 8,0x90
-.Lj114:
+.Lj148:
 	movl	-12(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-12(%ebp)
-# [197] for C := 0 to CursorW - 1 do
+# [297] for C := 0 to CursorW - 1 do
 	movl	$-1,-16(%ebp)
 	.balign 8,0x90
-.Lj117:
+.Lj151:
 	movl	-16(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-16(%ebp)
-# [199] if (Y - 1 + R >= 0) and (Y - 1 + R < RHeight) and
+# [299] if (Y - 1 + R >= 0) and (Y - 1 + R < RHeight) and
 	movl	-8(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-12(%ebp),%eax
 	cmpl	$0,%eax
-	jge	.Lj120
-	jmp	.Lj121
-.Lj120:
+	jge	.Lj154
+	jmp	.Lj155
+.Lj154:
 	movl	-8(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-12(%ebp),%eax
 	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
-	jl	.Lj122
-	jmp	.Lj121
-.Lj122:
-# [200] (X - 1 + C >= 0) and (X - 1 + C < RWidth) then
+	jl	.Lj156
+	jmp	.Lj155
+.Lj156:
+# [300] (X - 1 + C >= 0) and (X - 1 + C < RWidth) then
 	movl	-4(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-16(%ebp),%eax
 	cmpl	$0,%eax
-	jge	.Lj123
-	jmp	.Lj121
-.Lj123:
+	jge	.Lj157
+	jmp	.Lj155
+.Lj157:
 	movl	-4(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-16(%ebp),%eax
 	cmpl	U_$VIDEO_$$_RWIDTH,%eax
-	jl	.Lj124
-	jmp	.Lj121
-.Lj124:
-# [201] Framebuffer[(Y - 1 + R) * RWidth + (X - 1 + C)] := CursorBack[R * CursorW + C];
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%edx
+	jl	.Lj158
+	jmp	.Lj155
+.Lj158:
+# [301] PLongWord(PByte(Framebuffer) + (Y - 1 + R) * VPitch + (X - 1 + C) * BPP)^ :=
 	movl	-8(%ebp),%eax
-	leal	-1(%eax),%ecx
-	addl	-12(%ebp),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%eax
-	imull	%eax,%ecx
+	leal	-1(%eax),%edx
+	addl	-12(%ebp),%edx
+	movl	U_$VIDEO_$$_VPITCH,%eax
+	imull	%eax,%edx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%edx
 	movl	-4(%ebp),%eax
 	leal	-1(%eax),%eax
 	addl	-16(%ebp),%eax
-	leal	(%ecx,%eax),%ecx
+	shll	$2,%eax
+	leal	(%edx,%eax),%edx
+# [302] CursorBack[R * CursorW + C];
 	movl	-12(%ebp),%eax
 	imull	$18,%eax,%eax
 	addl	-16(%ebp),%eax
-	movb	U_$VIDEO_$$_CURSORBACK(,%eax,1),%al
-	movb	%al,(%edx,%ecx,1)
+	movl	U_$VIDEO_$$_CURSORBACK(,%eax,4),%eax
+	movl	%eax,(%edx)
 	.balign 4,0x90
-.Lj121:
+.Lj155:
 	cmpl	$17,-16(%ebp)
-	jge	.Lj119
-	jmp	.Lj117
-.Lj119:
+	jge	.Lj153
+	jmp	.Lj151
+.Lj153:
 	cmpl	$17,-12(%ebp)
-	jge	.Lj116
-	jmp	.Lj114
-.Lj116:
-# [203] end;
+	jge	.Lj150
+	jmp	.Lj148
+.Lj150:
+# [304] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
 
-.section .text.n_video_$$_writeat$longint$longint$pchar$longint,"x"
+.section .text.n_video_$$_savescreenarea$longint$longint$longint$longint,"x"
 	.balign 16,0x90
-.globl	VIDEO_$$_WRITEAT$LONGINT$LONGINT$PCHAR$LONGINT
-VIDEO_$$_WRITEAT$LONGINT$LONGINT$PCHAR$LONGINT:
-# [310] begin
+.globl	VIDEO_$$_SAVESCREENAREA$LONGINT$LONGINT$LONGINT$LONGINT
+VIDEO_$$_SAVESCREENAREA$LONGINT$LONGINT$LONGINT$LONGINT:
+# [323] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-28(%esp),%esp
+	leal	-24(%esp),%esp
+	pushl	%ebx
+	pushl	%esi
+# Var X located at ebp-4, size=OS_S32
+# Var Y located at ebp-8, size=OS_S32
+# Var W located at ebp-12, size=OS_S32
+# Var H located at ebp+8, size=OS_S32
+# Var R located at ebp-16, size=OS_S32
+# Var C located at ebp-20, size=OS_S32
+# Var idx located at ebp-24, size=OS_S32
+	movl	%eax,-4(%ebp)
+	movl	%edx,-8(%ebp)
+	movl	%ecx,-12(%ebp)
+# [324] if (W > MaxAreaW) or (H > MaxAreaH) then
+	cmpl	$165,-12(%ebp)
+	jg	.Lj161
+	jmp	.Lj162
+.Lj162:
+	cmpl	$250,8(%ebp)
+	jg	.Lj161
+	jmp	.Lj163
+.Lj161:
+# [325] Exit;
+	jmp	.Lj159
+	.balign 4,0x90
+.Lj163:
+# [326] ScreenArea.W := W;
+	movl	-12(%ebp),%eax
+	movl	%eax,U_$VIDEO_$$_SCREENAREA
+# [327] ScreenArea.H := H;
+	movl	8(%ebp),%eax
+	movl	%eax,U_$VIDEO_$$_SCREENAREA+4
+# [328] ScreenArea.Buf := @ScreenAreaBuf[0];
+	movl	$U_$VIDEO_$$_SCREENAREABUF,%eax
+	movl	%eax,U_$VIDEO_$$_SCREENAREA+8
+# [329] idx := 0;
+	movl	$0,-24(%ebp)
+# [330] for R := 0 to H - 1 do
+	movl	8(%ebp),%eax
+	leal	-1(%eax),%eax
+	cmpl	$0,%eax
+	jge	.Lj164
+	jmp	.Lj165
+.Lj164:
+	movl	$-1,-16(%ebp)
+	.balign 8,0x90
+.Lj166:
+	movl	-16(%ebp),%edx
+	leal	1(%edx),%edx
+	movl	%edx,-16(%ebp)
+# [331] for C := 0 to W - 1 do
+	movl	-12(%ebp),%edx
+	leal	-1(%edx),%edx
+	cmpl	$0,%edx
+	jge	.Lj169
+	jmp	.Lj170
+.Lj169:
+	movl	$-1,-20(%ebp)
+	.balign 8,0x90
+.Lj171:
+	movl	-20(%ebp),%ecx
+	leal	1(%ecx),%ecx
+	movl	%ecx,-20(%ebp)
+# [333] if (Y + R >= 0) and (Y + R < RHeight) and
+	movl	-8(%ebp),%ebx
+	movl	-16(%ebp),%ecx
+	leal	(%ebx,%ecx),%ecx
+	cmpl	$0,%ecx
+	jge	.Lj174
+	jmp	.Lj175
+.Lj174:
+	movl	-8(%ebp),%ecx
+	movl	-16(%ebp),%ebx
+	leal	(%ecx,%ebx),%ecx
+	cmpl	U_$VIDEO_$$_RHEIGHT,%ecx
+	jl	.Lj176
+	jmp	.Lj175
+.Lj176:
+# [334] (X + C >= 0) and (X + C < RWidth) then
+	movl	-4(%ebp),%ecx
+	movl	-20(%ebp),%ebx
+	leal	(%ecx,%ebx),%ecx
+	cmpl	$0,%ecx
+	jge	.Lj177
+	jmp	.Lj175
+.Lj177:
+	movl	-4(%ebp),%ecx
+	movl	-20(%ebp),%ebx
+	leal	(%ecx,%ebx),%ecx
+	cmpl	U_$VIDEO_$$_RWIDTH,%ecx
+	jl	.Lj178
+	jmp	.Lj175
+.Lj178:
+# [336] (Y + R) * VPitch + (X + C) * BPP)^
+	movl	-8(%ebp),%ecx
+	movl	-16(%ebp),%ebx
+	leal	(%ecx,%ebx),%ebx
+	movl	U_$VIDEO_$$_VPITCH,%ecx
+	imull	%ecx,%ebx
+# [335] ScreenAreaBuf[idx] := PLongWord(PByte(Framebuffer) +
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%ebx
+	movl	-4(%ebp),%ecx
+	movl	-20(%ebp),%esi
+	leal	(%ecx,%esi),%ecx
+	shll	$2,%ecx
+	leal	(%ebx,%ecx),%ecx
+	movl	-24(%ebp),%ebx
+	movl	(%ecx),%ecx
+	movl	%ecx,U_$VIDEO_$$_SCREENAREABUF(,%ebx,4)
+	jmp	.Lj179
+.Lj175:
+# [338] ScreenAreaBuf[idx] := 0;
+	movl	-24(%ebp),%ecx
+	movl	$0,U_$VIDEO_$$_SCREENAREABUF(,%ecx,4)
+.Lj179:
+# [339] Inc(idx);
+	addl	$1,-24(%ebp)
+	cmpl	-20(%ebp),%edx
+	jle	.Lj173
+	jmp	.Lj171
+.Lj173:
+	.balign 4,0x90
+.Lj170:
+	cmpl	-16(%ebp),%eax
+	jle	.Lj168
+	jmp	.Lj166
+.Lj168:
+	.balign 4,0x90
+.Lj165:
+.Lj159:
+# [341] end;
+	popl	%esi
+	popl	%ebx
+	movl	%ebp,%esp
+	popl	%ebp
+	ret	$4
+
+.section .text.n_video_$$_restorescreenarea$longint$longint$longint$longint,"x"
+	.balign 16,0x90
+.globl	VIDEO_$$_RESTORESCREENAREA$LONGINT$LONGINT$LONGINT$LONGINT
+VIDEO_$$_RESTORESCREENAREA$LONGINT$LONGINT$LONGINT$LONGINT:
+# [346] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+	leal	-24(%esp),%esp
+	pushl	%ebx
+	pushl	%esi
+# Var X located at ebp-4, size=OS_S32
+# Var Y located at ebp-8, size=OS_S32
+# Var W located at ebp-12, size=OS_S32
+# Var H located at ebp+8, size=OS_S32
+# Var R located at ebp-16, size=OS_S32
+# Var C located at ebp-20, size=OS_S32
+# Var idx located at ebp-24, size=OS_S32
+	movl	%eax,-4(%ebp)
+	movl	%edx,-8(%ebp)
+	movl	%ecx,-12(%ebp)
+# [347] if (ScreenArea.Buf = nil) or (W > MaxAreaW) or (H > MaxAreaH) then
+	cmpl	$0,U_$VIDEO_$$_SCREENAREA+8
+	je	.Lj182
+	jmp	.Lj183
+.Lj183:
+	cmpl	$165,-12(%ebp)
+	jg	.Lj182
+	jmp	.Lj184
+.Lj184:
+	cmpl	$250,8(%ebp)
+	jg	.Lj182
+	jmp	.Lj185
+.Lj182:
+# [348] Exit;
+	jmp	.Lj180
+	.balign 4,0x90
+.Lj185:
+# [349] idx := 0;
+	movl	$0,-24(%ebp)
+# [350] for R := 0 to H - 1 do
+	movl	8(%ebp),%eax
+	leal	-1(%eax),%eax
+	cmpl	$0,%eax
+	jge	.Lj186
+	jmp	.Lj187
+.Lj186:
+	movl	$-1,-16(%ebp)
+	.balign 8,0x90
+.Lj188:
+	movl	-16(%ebp),%edx
+	leal	1(%edx),%edx
+	movl	%edx,-16(%ebp)
+# [351] for C := 0 to W - 1 do
+	movl	-12(%ebp),%edx
+	leal	-1(%edx),%edx
+	cmpl	$0,%edx
+	jge	.Lj191
+	jmp	.Lj192
+.Lj191:
+	movl	$-1,-20(%ebp)
+	.balign 8,0x90
+.Lj193:
+	movl	-20(%ebp),%ecx
+	leal	1(%ecx),%ecx
+	movl	%ecx,-20(%ebp)
+# [353] if (Y + R >= 0) and (Y + R < RHeight) and
+	movl	-8(%ebp),%ebx
+	movl	-16(%ebp),%ecx
+	leal	(%ebx,%ecx),%ecx
+	cmpl	$0,%ecx
+	jge	.Lj196
+	jmp	.Lj197
+.Lj196:
+	movl	-8(%ebp),%ebx
+	movl	-16(%ebp),%ecx
+	leal	(%ebx,%ecx),%ecx
+	cmpl	U_$VIDEO_$$_RHEIGHT,%ecx
+	jl	.Lj198
+	jmp	.Lj197
+.Lj198:
+# [354] (X + C >= 0) and (X + C < RWidth) then
+	movl	-4(%ebp),%ecx
+	movl	-20(%ebp),%ebx
+	leal	(%ecx,%ebx),%ecx
+	cmpl	$0,%ecx
+	jge	.Lj199
+	jmp	.Lj197
+.Lj199:
+	movl	-4(%ebp),%ecx
+	movl	-20(%ebp),%ebx
+	leal	(%ecx,%ebx),%ecx
+	cmpl	U_$VIDEO_$$_RWIDTH,%ecx
+	jl	.Lj200
+	jmp	.Lj197
+.Lj200:
+# [355] PLongWord(PByte(Framebuffer) + (Y + R) * VPitch + (X + C) * BPP)^ :=
+	movl	-8(%ebp),%ecx
+	movl	-16(%ebp),%ebx
+	leal	(%ecx,%ebx),%ebx
+	movl	U_$VIDEO_$$_VPITCH,%ecx
+	imull	%ecx,%ebx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%ebx
+	movl	-4(%ebp),%esi
+	movl	-20(%ebp),%ecx
+	leal	(%esi,%ecx),%ecx
+	shll	$2,%ecx
+	leal	(%ebx,%ecx),%ebx
+# [356] ScreenAreaBuf[idx];
+	movl	-24(%ebp),%ecx
+	movl	U_$VIDEO_$$_SCREENAREABUF(,%ecx,4),%ecx
+	movl	%ecx,(%ebx)
+	.balign 4,0x90
+.Lj197:
+# [357] Inc(idx);
+	addl	$1,-24(%ebp)
+	cmpl	-20(%ebp),%edx
+	jle	.Lj195
+	jmp	.Lj193
+.Lj195:
+	.balign 4,0x90
+.Lj192:
+	cmpl	-16(%ebp),%eax
+	jle	.Lj190
+	jmp	.Lj188
+.Lj190:
+	.balign 4,0x90
+.Lj187:
+.Lj180:
+# [359] end;
+	popl	%esi
+	popl	%ebx
+	movl	%ebp,%esp
+	popl	%ebp
+	ret	$4
+
+.section .text.n_video_$$_writeatcol$longint$longint$pchar$longint$byte,"x"
+	.balign 16,0x90
+.globl	VIDEO_$$_WRITEATCOL$LONGINT$LONGINT$PCHAR$LONGINT$BYTE
+VIDEO_$$_WRITEATCOL$LONGINT$LONGINT$PCHAR$LONGINT$BYTE:
+# [467] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+	leal	-32(%esp),%esp
 	pushl	%ebx
 	pushl	%esi
 	pushl	%edi
 # Var X located at ebp-4, size=OS_S32
 # Var Y located at ebp-8, size=OS_S32
 # Var Text located at ebp-12, size=OS_32
-# Var Size located at ebp+8, size=OS_S32
+# Var Size located at ebp+12, size=OS_S32
+# Var Color located at ebp+8, size=OS_8
 # Var i located at ebp-16, size=OS_S32
 # Var R located at ebp-20, size=OS_S32
 # Var C located at ebp-24, size=OS_S32
 # Var G located at ebp-28, size=OS_S32
+# Var Pix located at ebp-32, size=OS_32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movl	%ecx,-12(%ebp)
-# [311] if Text = nil then
+# [468] if Text = nil then
 	cmpl	$0,-12(%ebp)
-	je	.Lj127
-	jmp	.Lj128
-.Lj127:
-# [312] Exit;
-	jmp	.Lj125
+	je	.Lj203
+	jmp	.Lj204
+.Lj203:
+# [469] Exit;
+	jmp	.Lj201
 	.balign 4,0x90
-.Lj128:
-# [313] if Size < 8 then
-	cmpl	$8,8(%ebp)
-	jl	.Lj129
-	jmp	.Lj130
-.Lj129:
-# [314] Size := 8;
-	movl	$8,8(%ebp)
+.Lj204:
+# [470] if Size < 8 then
+	cmpl	$8,12(%ebp)
+	jl	.Lj205
+	jmp	.Lj206
+.Lj205:
+# [471] Size := 8;
+	movl	$8,12(%ebp)
 	.balign 4,0x90
-.Lj130:
-# [315] i := 0;
+.Lj206:
+# [472] Pix := PalColor(Color);
+	movb	8(%ebp),%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	%eax,-32(%ebp)
+# [473] i := 0;
 	movl	$0,-16(%ebp)
-# [316] while Text[i] <> #0 do
-	jmp	.Lj132
+# [474] while Text[i] <> #0 do
+	jmp	.Lj208
 	.balign 8,0x90
-.Lj131:
-# [318] if Text[i] = #10 then
-	movl	-12(%ebp),%edx
-	movl	-16(%ebp),%eax
-	cmpb	$10,(%edx,%eax,1)
-	je	.Lj134
-	jmp	.Lj135
-.Lj134:
-# [320] Y := Y + Size;
+.Lj207:
+# [476] if Text[i] = #10 then
+	movl	-12(%ebp),%eax
+	movl	-16(%ebp),%edx
+	cmpb	$10,(%eax,%edx,1)
+	je	.Lj210
+	jmp	.Lj211
+.Lj210:
+# [478] Y := Y + Size;
 	movl	-8(%ebp),%edx
-	movl	8(%ebp),%eax
+	movl	12(%ebp),%eax
 	leal	(%edx,%eax),%eax
 	movl	%eax,-8(%ebp)
-# [321] i := i + 1;
+# [479] i := i + 1;
 	movl	-16(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-16(%ebp)
-# [322] Continue;
-	jmp	.Lj132
+# [480] Continue;
+	jmp	.Lj208
 	.balign 4,0x90
-.Lj135:
-# [324] if (Ord(Text[i]) >= 32) and (Ord(Text[i]) <= 127) then
+.Lj211:
+# [482] if (Ord(Text[i]) >= 32) and (Ord(Text[i]) <= 127) then
 	movl	-12(%ebp),%eax
 	movl	-16(%ebp),%edx
 	cmpb	$32,(%eax,%edx,1)
-	jae	.Lj136
-	jmp	.Lj137
-.Lj136:
-	movl	-12(%ebp),%eax
-	movl	-16(%ebp),%edx
-	cmpb	$127,(%eax,%edx,1)
-	jbe	.Lj138
-	jmp	.Lj137
-.Lj138:
-# [326] G := Ord(Text[i]) - 32;
-	movl	-12(%ebp),%eax
-	movl	-16(%ebp),%edx
-	movzbl	(%eax,%edx,1),%eax
+	jae	.Lj212
+	jmp	.Lj213
+.Lj212:
+	movl	-12(%ebp),%edx
+	movl	-16(%ebp),%eax
+	cmpb	$127,(%edx,%eax,1)
+	jbe	.Lj214
+	jmp	.Lj213
+.Lj214:
+# [484] G := Ord(Text[i]) - 32;
+	movl	-12(%ebp),%edx
+	movl	-16(%ebp),%eax
+	movzbl	(%edx,%eax,1),%eax
 	subl	$32,%eax
 	movl	%eax,-28(%ebp)
-# [327] for R := 0 to Size - 1 do
-	movl	8(%ebp),%eax
+# [485] for R := 0 to Size - 1 do
+	movl	12(%ebp),%eax
 	leal	-1(%eax),%ebx
 	cmpl	$0,%ebx
-	jge	.Lj139
-	jmp	.Lj140
-.Lj139:
+	jge	.Lj215
+	jmp	.Lj216
+.Lj215:
 	movl	$-1,-20(%ebp)
 	.balign 8,0x90
-.Lj141:
+.Lj217:
 	movl	-20(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-20(%ebp)
-# [328] for C := 0 to Size - 1 do
-	movl	8(%ebp),%eax
+# [486] for C := 0 to Size - 1 do
+	movl	12(%ebp),%eax
 	leal	-1(%eax),%esi
 	cmpl	$0,%esi
-	jge	.Lj144
-	jmp	.Lj145
-.Lj144:
+	jge	.Lj220
+	jmp	.Lj221
+.Lj220:
 	movl	$-1,-24(%ebp)
 	.balign 8,0x90
-.Lj146:
+.Lj222:
 	movl	-24(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-24(%ebp)
-# [329] if (Font8x8[G, (R * 8) div Size] and (1 shl ((C * 8) div Size))) <> 0 then
+# [487] if (Font8x8[G, (R * 8) div Size] and (1 shl ((C * 8) div Size))) <> 0 then
 	movl	-28(%ebp),%ecx
 	movl	-20(%ebp),%eax
 	shll	$3,%eax
 	cltd
-	idivl	8(%ebp)
+	idivl	12(%ebp)
 	shll	$3,%ecx
 	movzbl	TC_$VIDEO_$$_FONT8X8(%ecx,%eax,1),%edi
 	movl	-24(%ebp),%eax
 	shll	$3,%eax
 	cltd
-	idivl	8(%ebp)
+	idivl	12(%ebp)
 	movl	%eax,%ecx
 	movl	$1,%eax
 	shll	%cl,%eax
 	andl	%eax,%edi
 	testl	$-1,%edi
-	jne	.Lj149
-	jmp	.Lj150
-.Lj149:
-# [330] if (X + C >= 0) and (X + C < RWidth) and
-	movl	-4(%ebp),%eax
-	movl	-24(%ebp),%edx
-	leal	(%eax,%edx),%eax
-	cmpl	$0,%eax
-	jge	.Lj151
-	jmp	.Lj152
-.Lj151:
+	jne	.Lj225
+	jmp	.Lj226
+.Lj225:
+# [488] if (X + C >= 0) and (X + C < RWidth) and
 	movl	-4(%ebp),%edx
 	movl	-24(%ebp),%eax
 	leal	(%edx,%eax),%eax
+	cmpl	$0,%eax
+	jge	.Lj227
+	jmp	.Lj228
+.Lj227:
+	movl	-4(%ebp),%eax
+	movl	-24(%ebp),%edx
+	leal	(%eax,%edx),%eax
 	cmpl	U_$VIDEO_$$_RWIDTH,%eax
-	jl	.Lj153
-	jmp	.Lj152
-.Lj153:
-# [331] (Y + R >= 0) and (Y + R < RHeight) then
+	jl	.Lj229
+	jmp	.Lj228
+.Lj229:
+# [489] (Y + R >= 0) and (Y + R < RHeight) then
 	movl	-8(%ebp),%edx
 	movl	-20(%ebp),%eax
 	leal	(%edx,%eax),%eax
 	cmpl	$0,%eax
-	jge	.Lj154
-	jmp	.Lj152
-.Lj154:
+	jge	.Lj230
+	jmp	.Lj228
+.Lj230:
+	movl	-8(%ebp),%edx
+	movl	-20(%ebp),%eax
+	leal	(%edx,%eax),%eax
+	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
+	jl	.Lj231
+	jmp	.Lj228
+.Lj231:
+# [490] PLongWord(PByte(Framebuffer) + (Y + R) * VPitch + (X + C) * BPP)^ := Pix;
 	movl	-8(%ebp),%eax
 	movl	-20(%ebp),%edx
-	leal	(%eax,%edx),%eax
-	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
-	jl	.Lj155
-	jmp	.Lj152
-.Lj155:
-# [332] Framebuffer[(Y + R) * RWidth + X + C] := 0;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%edx
-	movl	-8(%ebp),%eax
-	movl	-20(%ebp),%ecx
-	leal	(%eax,%ecx),%ecx
-	movl	U_$VIDEO_$$_RWIDTH,%eax
-	imull	%eax,%ecx
-	addl	-4(%ebp),%ecx
-	addl	-24(%ebp),%ecx
-	movb	$0,(%edx,%ecx,1)
+	leal	(%eax,%edx),%edx
+	movl	U_$VIDEO_$$_VPITCH,%eax
+	imull	%eax,%edx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%edx
+	movl	-4(%ebp),%ecx
+	movl	-24(%ebp),%eax
+	leal	(%ecx,%eax),%eax
+	shll	$2,%eax
+	leal	(%edx,%eax),%eax
+	movl	-32(%ebp),%edx
+	movl	%edx,(%eax)
 	.balign 4,0x90
-.Lj152:
+.Lj228:
 	.balign 4,0x90
-.Lj150:
+.Lj226:
 	cmpl	-24(%ebp),%esi
-	jle	.Lj148
-	jmp	.Lj146
-.Lj148:
+	jle	.Lj224
+	jmp	.Lj222
+.Lj224:
 	.balign 4,0x90
-.Lj145:
+.Lj221:
 	cmpl	-20(%ebp),%ebx
-	jle	.Lj143
-	jmp	.Lj141
-.Lj143:
+	jle	.Lj219
+	jmp	.Lj217
+.Lj219:
 	.balign 4,0x90
-.Lj140:
-# [333] X := X + Size;
-	movl	-4(%ebp),%eax
-	movl	8(%ebp),%edx
-	leal	(%eax,%edx),%eax
+.Lj216:
+# [491] X := X + Size;
+	movl	-4(%ebp),%edx
+	movl	12(%ebp),%eax
+	leal	(%edx,%eax),%eax
 	movl	%eax,-4(%ebp)
 	.balign 4,0x90
-.Lj137:
-# [335] i := i + 1;
+.Lj213:
+# [493] i := i + 1;
 	movl	-16(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-16(%ebp)
-.Lj132:
-	movl	-12(%ebp),%edx
-	movl	-16(%ebp),%eax
-	cmpb	$0,(%edx,%eax,1)
-	jne	.Lj131
-	jmp	.Lj133
-.Lj133:
-.Lj125:
-# [337] end;
+.Lj208:
+	movl	-12(%ebp),%eax
+	movl	-16(%ebp),%edx
+	cmpb	$0,(%eax,%edx,1)
+	jne	.Lj207
+	jmp	.Lj209
+.Lj209:
+.Lj201:
+# [495] end;
 	popl	%edi
 	popl	%esi
 	popl	%ebx
+	movl	%ebp,%esp
+	popl	%ebp
+	ret	$8
+
+.section .text.n_video_$$_writeat$longint$longint$pchar$longint,"x"
+	.balign 16,0x90
+.globl	VIDEO_$$_WRITEAT$LONGINT$LONGINT$PCHAR$LONGINT
+VIDEO_$$_WRITEAT$LONGINT$LONGINT$PCHAR$LONGINT:
+# [498] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+	leal	-12(%esp),%esp
+# Var X located at ebp-4, size=OS_S32
+# Var Y located at ebp-8, size=OS_S32
+# Var Text located at ebp-12, size=OS_32
+# Var Size located at ebp+8, size=OS_S32
+	movl	%eax,-4(%ebp)
+	movl	%edx,-8(%ebp)
+	movl	%ecx,-12(%ebp)
+# [499] WriteAtCol(X, Y, Text, Size, 0);
+	pushl	8(%ebp)
+	pushl	$0
+	movl	-12(%ebp),%ecx
+	movl	-8(%ebp),%edx
+	movl	-4(%ebp),%eax
+	call	VIDEO_$$_WRITEATCOL$LONGINT$LONGINT$PCHAR$LONGINT$BYTE
+# [500] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret	$4
@@ -1126,7 +1784,7 @@ VIDEO_$$_WRITEAT$LONGINT$LONGINT$PCHAR$LONGINT:
 	.balign 16,0x90
 .globl	VIDEO_$$_PUTSYMBOL$LONGINT$LONGINT$CHAR$LONGINT
 VIDEO_$$_PUTSYMBOL$LONGINT$LONGINT$CHAR$LONGINT:
-# [353] begin
+# [516] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-24(%esp),%esp
@@ -1143,57 +1801,57 @@ VIDEO_$$_PUTSYMBOL$LONGINT$LONGINT$CHAR$LONGINT:
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movb	%cl,-12(%ebp)
-# [354] if Size < 8 then
+# [517] if Size < 8 then
 	cmpl	$8,8(%ebp)
-	jl	.Lj158
-	jmp	.Lj159
-.Lj158:
-# [355] Size := 8;
+	jl	.Lj236
+	jmp	.Lj237
+.Lj236:
+# [518] Size := 8;
 	movl	$8,8(%ebp)
 	.balign 4,0x90
-.Lj159:
-# [356] for i := Low(SymbolFont) to High(SymbolFont) do
+.Lj237:
+# [519] for i := Low(SymbolFont) to High(SymbolFont) do
 	movl	$-1,-16(%ebp)
 	.balign 8,0x90
-.Lj160:
+.Lj238:
 	movl	-16(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-16(%ebp)
-# [357] if SymbolFont[i].Ch = Symbol then
+# [520] if SymbolFont[i].Ch = Symbol then
 	movl	-16(%ebp),%eax
 	leal	(%eax,%eax,8),%eax
 	movb	TC_$VIDEO_$$_SYMBOLFONT(,%eax),%al
 	cmpb	-12(%ebp),%al
-	je	.Lj163
-	jmp	.Lj164
-.Lj163:
-# [359] for R := 0 to Size - 1 do
+	je	.Lj241
+	jmp	.Lj242
+.Lj241:
+# [522] for R := 0 to Size - 1 do
 	movl	8(%ebp),%eax
 	leal	-1(%eax),%ebx
 	cmpl	$0,%ebx
-	jge	.Lj165
-	jmp	.Lj166
-.Lj165:
+	jge	.Lj243
+	jmp	.Lj244
+.Lj243:
 	movl	$-1,-20(%ebp)
 	.balign 8,0x90
-.Lj167:
+.Lj245:
 	movl	-20(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-20(%ebp)
-# [360] for C := 0 to Size - 1 do
+# [523] for C := 0 to Size - 1 do
 	movl	8(%ebp),%eax
 	leal	-1(%eax),%esi
 	cmpl	$0,%esi
-	jge	.Lj170
-	jmp	.Lj171
-.Lj170:
+	jge	.Lj248
+	jmp	.Lj249
+.Lj248:
 	movl	$-1,-24(%ebp)
 	.balign 8,0x90
-.Lj172:
+.Lj250:
 	movl	-24(%ebp),%eax
 	leal	1(%eax),%eax
 	movl	%eax,-24(%ebp)
-# [361] if (SymbolFont[i].G[(R * 8) div Size] and (1 shl ((C * 8) div Size))) <> 0 then
+# [524] if (SymbolFont[i].G[(R * 8) div Size] and (1 shl ((C * 8) div Size))) <> 0 then
 	movl	-16(%ebp),%eax
 	leal	(%eax,%eax,8),%ecx
 	movl	-20(%ebp),%eax
@@ -1210,75 +1868,80 @@ VIDEO_$$_PUTSYMBOL$LONGINT$LONGINT$CHAR$LONGINT:
 	shll	%cl,%eax
 	andl	%eax,%edi
 	testl	$-1,%edi
-	jne	.Lj175
-	jmp	.Lj176
-.Lj175:
-# [362] if (X + C >= 0) and (X + C < RWidth) and
+	jne	.Lj253
+	jmp	.Lj254
+.Lj253:
+# [525] if (X + C >= 0) and (X + C < RWidth) and
 	movl	-4(%ebp),%eax
 	movl	-24(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	cmpl	$0,%eax
-	jge	.Lj177
-	jmp	.Lj178
-.Lj177:
+	jge	.Lj255
+	jmp	.Lj256
+.Lj255:
 	movl	-4(%ebp),%edx
 	movl	-24(%ebp),%eax
 	leal	(%edx,%eax),%eax
 	cmpl	U_$VIDEO_$$_RWIDTH,%eax
-	jl	.Lj179
-	jmp	.Lj178
-.Lj179:
-# [363] (Y + R >= 0) and (Y + R < RHeight) then
+	jl	.Lj257
+	jmp	.Lj256
+.Lj257:
+# [526] (Y + R >= 0) and (Y + R < RHeight) then
 	movl	-8(%ebp),%eax
 	movl	-20(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	cmpl	$0,%eax
-	jge	.Lj180
-	jmp	.Lj178
-.Lj180:
+	jge	.Lj258
+	jmp	.Lj256
+.Lj258:
 	movl	-8(%ebp),%eax
 	movl	-20(%ebp),%edx
 	leal	(%eax,%edx),%eax
 	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
-	jl	.Lj181
-	jmp	.Lj178
-.Lj181:
-# [364] Framebuffer[(Y + R) * RWidth + X + C] := 0;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%ecx
-	movl	-8(%ebp),%eax
-	movl	-20(%ebp),%edx
-	leal	(%eax,%edx),%eax
-	movl	U_$VIDEO_$$_RWIDTH,%edx
-	imull	%edx,%eax
-	addl	-4(%ebp),%eax
-	addl	-24(%ebp),%eax
-	movb	$0,(%ecx,%eax,1)
+	jl	.Lj259
+	jmp	.Lj256
+.Lj259:
+# [527] PLongWord(PByte(Framebuffer) + (Y + R) * VPitch + (X + C) * BPP)^ := PalColor(0);
+	movb	$0,%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+	movl	-8(%ebp),%edx
+	movl	-20(%ebp),%ecx
+	leal	(%edx,%ecx),%ecx
+	movl	U_$VIDEO_$$_VPITCH,%edx
+	imull	%edx,%ecx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%ecx
+	movl	-4(%ebp),%edi
+	movl	-24(%ebp),%edx
+	leal	(%edi,%edx),%edx
+	shll	$2,%edx
+	leal	(%ecx,%edx),%edx
+	movl	%eax,(%edx)
 	.balign 4,0x90
-.Lj178:
+.Lj256:
 	.balign 4,0x90
-.Lj176:
+.Lj254:
 	cmpl	-24(%ebp),%esi
-	jle	.Lj174
-	jmp	.Lj172
-.Lj174:
+	jle	.Lj252
+	jmp	.Lj250
+.Lj252:
 	.balign 4,0x90
-.Lj171:
+.Lj249:
 	cmpl	-20(%ebp),%ebx
-	jle	.Lj169
-	jmp	.Lj167
-.Lj169:
+	jle	.Lj247
+	jmp	.Lj245
+.Lj247:
 	.balign 4,0x90
-.Lj166:
-# [365] Exit;
-	jmp	.Lj156
+.Lj244:
+# [528] Exit;
+	jmp	.Lj234
 	.balign 4,0x90
-.Lj164:
+.Lj242:
 	cmpl	$0,-16(%ebp)
-	jge	.Lj162
-	jmp	.Lj160
-.Lj162:
-.Lj156:
-# [367] end;
+	jge	.Lj240
+	jmp	.Lj238
+.Lj240:
+.Lj234:
+# [530] end;
 	popl	%edi
 	popl	%esi
 	popl	%ebx
@@ -1290,7 +1953,7 @@ VIDEO_$$_PUTSYMBOL$LONGINT$LONGINT$CHAR$LONGINT:
 	.balign 16,0x90
 .globl	VIDEO_$$_DRAWSPRITE$PBYTE$LONGINT$LONGINT$LONGINT$LONGINT
 VIDEO_$$_DRAWSPRITE$PBYTE$LONGINT$LONGINT$LONGINT$LONGINT:
-# [373] begin
+# [538] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-24(%esp),%esp
@@ -1303,107 +1966,115 @@ VIDEO_$$_DRAWSPRITE$PBYTE$LONGINT$LONGINT$LONGINT$LONGINT:
 # Var DstY located at ebp+8, size=OS_S32
 # Var X located at ebp-16, size=OS_S32
 # Var Y located at ebp-20, size=OS_S32
-# Var C located at ebp-24, size=OS_8
+# Var C located at ebp-24, size=OS_32
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movl	%ecx,-12(%ebp)
-# [374] for Y := 0 to SrcH - 1 do
+# [539] for Y := 0 to SrcH - 1 do
 	movl	-12(%ebp),%eax
 	leal	-1(%eax),%eax
 	cmpl	$0,%eax
-	jge	.Lj184
-	jmp	.Lj185
-.Lj184:
+	jge	.Lj262
+	jmp	.Lj263
+.Lj262:
 	movl	$-1,-20(%ebp)
 	.balign 8,0x90
-.Lj186:
+.Lj264:
 	movl	-20(%ebp),%edx
 	leal	1(%edx),%edx
 	movl	%edx,-20(%ebp)
-# [375] for X := 0 to SrcW - 1 do
+# [540] for X := 0 to SrcW - 1 do
 	movl	-8(%ebp),%edx
 	leal	-1(%edx),%edx
 	cmpl	$0,%edx
-	jge	.Lj189
-	jmp	.Lj190
-.Lj189:
+	jge	.Lj267
+	jmp	.Lj268
+.Lj267:
 	movl	$-1,-16(%ebp)
 	.balign 8,0x90
-.Lj191:
+.Lj269:
 	movl	-16(%ebp),%ecx
 	leal	1(%ecx),%ecx
 	movl	%ecx,-16(%ebp)
-# [377] C := PByte(PByte(Src) + Y * SrcW + X)^;
+# [542] C := PLongWord(PByte(Src) + (Y * SrcW + X) * BPP)^;
 	movl	-20(%ebp),%ebx
 	movl	-8(%ebp),%ecx
 	imull	%ebx,%ecx
-	addl	-4(%ebp),%ecx
 	addl	-16(%ebp),%ecx
-	movb	(%ecx),%cl
-	movb	%cl,-24(%ebp)
-# [378] if C <> 0 then
-	cmpb	$0,-24(%ebp)
-	jne	.Lj194
-	jmp	.Lj195
-.Lj194:
-# [379] if (DstX + X >= 0) and (DstX + X < RWidth) and
+	shll	$2,%ecx
+	addl	-4(%ebp),%ecx
+	movl	(%ecx),%ecx
+	movl	%ecx,-24(%ebp)
+# [543] if (C and $FF000000) <> 0 then
+	movl	-24(%ebp),%ecx
+	andl	$-16777216,%ecx
+	testl	$-1,%ecx
+	jne	.Lj272
+	jmp	.Lj273
+.Lj272:
+# [544] if (DstX + X >= 0) and (DstX + X < RWidth) and
 	movl	12(%ebp),%ebx
 	movl	-16(%ebp),%ecx
 	leal	(%ebx,%ecx),%ecx
 	cmpl	$0,%ecx
-	jge	.Lj196
-	jmp	.Lj197
-.Lj196:
+	jge	.Lj274
+	jmp	.Lj275
+.Lj274:
 	movl	12(%ebp),%ebx
 	movl	-16(%ebp),%ecx
 	leal	(%ebx,%ecx),%ecx
 	cmpl	U_$VIDEO_$$_RWIDTH,%ecx
-	jl	.Lj198
-	jmp	.Lj197
-.Lj198:
-# [380] (DstY + Y >= 0) and (DstY + Y < RHeight) then
+	jl	.Lj276
+	jmp	.Lj275
+.Lj276:
+# [545] (DstY + Y >= 0) and (DstY + Y < RHeight) then
 	movl	8(%ebp),%ecx
 	movl	-20(%ebp),%ebx
 	leal	(%ecx,%ebx),%ecx
 	cmpl	$0,%ecx
-	jge	.Lj199
-	jmp	.Lj197
-.Lj199:
-	movl	8(%ebp),%ebx
-	movl	-20(%ebp),%ecx
-	leal	(%ebx,%ecx),%ecx
-	cmpl	U_$VIDEO_$$_RHEIGHT,%ecx
-	jl	.Lj200
-	jmp	.Lj197
-.Lj200:
-# [381] Framebuffer[(DstY + Y) * RWidth + DstX + X] := C;
-	movl	U_$VIDEO_$$_FRAMEBUFFER,%ebx
+	jge	.Lj277
+	jmp	.Lj275
+.Lj277:
 	movl	8(%ebp),%ecx
-	movl	-20(%ebp),%esi
-	leal	(%ecx,%esi),%esi
-	movl	U_$VIDEO_$$_RWIDTH,%ecx
-	imull	%ecx,%esi
-	addl	12(%ebp),%esi
-	addl	-16(%ebp),%esi
-	movb	-24(%ebp),%cl
-	movb	%cl,(%ebx,%esi,1)
+	movl	-20(%ebp),%ebx
+	leal	(%ecx,%ebx),%ecx
+	cmpl	U_$VIDEO_$$_RHEIGHT,%ecx
+	jl	.Lj278
+	jmp	.Lj275
+.Lj278:
+# [546] PLongWord(PByte(Framebuffer) + (DstY + Y) * VPitch + (DstX + X) * BPP)^ :=
+	movl	8(%ebp),%ecx
+	movl	-20(%ebp),%ebx
+	leal	(%ecx,%ebx),%ebx
+	movl	U_$VIDEO_$$_VPITCH,%ecx
+	imull	%ecx,%ebx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%ebx
+	movl	12(%ebp),%ecx
+	movl	-16(%ebp),%esi
+	leal	(%ecx,%esi),%ecx
+	shll	$2,%ecx
+	leal	(%ebx,%ecx),%ebx
+# [547] C and $00FFFFFF;
+	movl	-24(%ebp),%ecx
+	andl	$16777215,%ecx
+	movl	%ecx,(%ebx)
 	.balign 4,0x90
-.Lj197:
+.Lj275:
 	.balign 4,0x90
-.Lj195:
+.Lj273:
 	cmpl	-16(%ebp),%edx
-	jle	.Lj193
-	jmp	.Lj191
-.Lj193:
+	jle	.Lj271
+	jmp	.Lj269
+.Lj271:
 	.balign 4,0x90
-.Lj190:
+.Lj268:
 	cmpl	-20(%ebp),%eax
-	jle	.Lj188
-	jmp	.Lj186
-.Lj188:
+	jle	.Lj266
+	jmp	.Lj264
+.Lj266:
 	.balign 4,0x90
-.Lj185:
-# [383] end;
+.Lj263:
+# [549] end;
 	popl	%esi
 	popl	%ebx
 	movl	%ebp,%esp
@@ -1414,7 +2085,7 @@ VIDEO_$$_DRAWSPRITE$PBYTE$LONGINT$LONGINT$LONGINT$LONGINT:
 	.balign 16,0x90
 .globl	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
 VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT:
-# [389] begin
+# [555] begin
 	pushl	%ebp
 	movl	%esp,%ebp
 	leal	-24(%esp),%esp
@@ -1427,26 +2098,26 @@ VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT:
 	movl	%eax,-4(%ebp)
 	movl	%edx,-8(%ebp)
 	movl	%ecx,-12(%ebp)
-# [390] W := 0;
+# [556] W := 0;
 	movl	$0,-20(%ebp)
-# [391] H := 0;
+# [557] H := 0;
 	movl	$0,-24(%ebp)
-# [392] N := FSReadFile(Name, @AssetBuf[0], SizeOf(AssetBuf));
+# [558] N := FSReadFile(Name, @AssetBuf[0], SizeOf(AssetBuf));
 	movl	$U_$VIDEO_$$_ASSETBUF,%eax
 	movl	%eax,%edx
 	movl	-4(%ebp),%eax
-	movl	$16384,%ecx
+	movl	$65536,%ecx
 	call	CDROM_$$_FSREADFILE$PCHAR$PBYTE$LONGWORD$$LONGINT
 	movl	%eax,-16(%ebp)
-# [393] if N < 0 then Exit;
+# [559] if N < 0 then Exit;
 	cmpl	$0,-16(%ebp)
-	jl	.Lj203
-	jmp	.Lj204
-.Lj203:
-	jmp	.Lj201
+	jl	.Lj281
+	jmp	.Lj282
+.Lj281:
+	jmp	.Lj279
 	.balign 4,0x90
-.Lj204:
-# [394] BMPDecode(@AssetBuf[0], LongWord(N), W, H, @DrawBuf[0], SizeOf(DrawBuf));
+.Lj282:
+# [560] BMPDecode(@AssetBuf[0], LongWord(N), W, H, @DrawBuf[0], SizeOf(DrawBuf) div BPP);
 	leal	-24(%ebp),%eax
 	pushl	%eax
 	movl	$U_$VIDEO_$$_DRAWBUF,%eax
@@ -1456,27 +2127,231 @@ VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT:
 	leal	-20(%ebp),%ecx
 	movl	-16(%ebp),%edx
 	call	BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN
-# [395] if (W = 0) or (H = 0) then Exit;
+# [561] if (W = 0) or (H = 0) then Exit;
 	cmpl	$0,-20(%ebp)
-	je	.Lj205
-	jmp	.Lj206
-.Lj206:
+	je	.Lj283
+	jmp	.Lj284
+.Lj284:
 	cmpl	$0,-24(%ebp)
-	je	.Lj205
-	jmp	.Lj207
-.Lj205:
-	jmp	.Lj201
+	je	.Lj283
+	jmp	.Lj285
+.Lj283:
+	jmp	.Lj279
 	.balign 4,0x90
-.Lj207:
-# [396] DrawSprite(@DrawBuf[0], W, H, X, Y);
+.Lj285:
+# [562] DrawSprite(@DrawBuf[0], W, H, X, Y);
 	pushl	-8(%ebp)
 	pushl	-12(%ebp)
 	movl	$U_$VIDEO_$$_DRAWBUF,%eax
 	movl	-24(%ebp),%ecx
 	movl	-20(%ebp),%edx
 	call	VIDEO_$$_DRAWSPRITE$PBYTE$LONGINT$LONGINT$LONGINT$LONGINT
-.Lj201:
-# [397] end;
+.Lj279:
+# [563] end;
+	movl	%ebp,%esp
+	popl	%ebp
+	ret
+
+.section .text.n_video_$$_drawspriteblack$pbyte$longint$longint$longint$longint,"x"
+	.balign 16,0x90
+VIDEO_$$_DRAWSPRITEBLACK$PBYTE$LONGINT$LONGINT$LONGINT$LONGINT:
+# [571] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+	leal	-24(%esp),%esp
+	pushl	%ebx
+	pushl	%esi
+	pushl	%edi
+# Var Src located at ebp-4, size=OS_32
+# Var SrcW located at ebp-8, size=OS_S32
+# Var SrcH located at ebp-12, size=OS_S32
+# Var DstX located at ebp+12, size=OS_S32
+# Var DstY located at ebp+8, size=OS_S32
+# Var X located at ebp-16, size=OS_S32
+# Var Y located at ebp-20, size=OS_S32
+# Var C located at ebp-24, size=OS_32
+	movl	%eax,-4(%ebp)
+	movl	%edx,-8(%ebp)
+	movl	%ecx,-12(%ebp)
+# [572] for Y := 0 to SrcH - 1 do
+	movl	-12(%ebp),%eax
+	leal	-1(%eax),%ebx
+	cmpl	$0,%ebx
+	jge	.Lj288
+	jmp	.Lj289
+.Lj288:
+	movl	$-1,-20(%ebp)
+	.balign 8,0x90
+.Lj290:
+	movl	-20(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-20(%ebp)
+# [573] for X := 0 to SrcW - 1 do
+	movl	-8(%ebp),%eax
+	leal	-1(%eax),%esi
+	cmpl	$0,%esi
+	jge	.Lj293
+	jmp	.Lj294
+.Lj293:
+	movl	$-1,-16(%ebp)
+	.balign 8,0x90
+.Lj295:
+	movl	-16(%ebp),%eax
+	leal	1(%eax),%eax
+	movl	%eax,-16(%ebp)
+# [575] C := PLongWord(PByte(Src) + (Y * SrcW + X) * BPP)^;
+	movl	-20(%ebp),%edx
+	movl	-8(%ebp),%eax
+	imull	%edx,%eax
+	addl	-16(%ebp),%eax
+	shll	$2,%eax
+	addl	-4(%ebp),%eax
+	movl	(%eax),%eax
+	movl	%eax,-24(%ebp)
+# [576] if (C and $FF000000) <> 0 then
+	movl	-24(%ebp),%eax
+	andl	$-16777216,%eax
+	testl	$-1,%eax
+	jne	.Lj298
+	jmp	.Lj299
+.Lj298:
+# [577] if (DstX + X >= 0) and (DstX + X < RWidth) and
+	movl	12(%ebp),%edx
+	movl	-16(%ebp),%eax
+	leal	(%edx,%eax),%eax
+	cmpl	$0,%eax
+	jge	.Lj300
+	jmp	.Lj301
+.Lj300:
+	movl	12(%ebp),%edx
+	movl	-16(%ebp),%eax
+	leal	(%edx,%eax),%eax
+	cmpl	U_$VIDEO_$$_RWIDTH,%eax
+	jl	.Lj302
+	jmp	.Lj301
+.Lj302:
+# [578] (DstY + Y >= 0) and (DstY + Y < RHeight) then
+	movl	8(%ebp),%eax
+	movl	-20(%ebp),%edx
+	leal	(%eax,%edx),%eax
+	cmpl	$0,%eax
+	jge	.Lj303
+	jmp	.Lj301
+.Lj303:
+	movl	8(%ebp),%edx
+	movl	-20(%ebp),%eax
+	leal	(%edx,%eax),%eax
+	cmpl	U_$VIDEO_$$_RHEIGHT,%eax
+	jl	.Lj304
+	jmp	.Lj301
+.Lj304:
+# [580] PalColor(0);
+	movb	$0,%al
+	call	VIDEO_$$_PALCOLOR$BYTE$$LONGWORD
+# [579] PLongWord(PByte(Framebuffer) + (DstY + Y) * VPitch + (DstX + X) * BPP)^ :=
+	movl	8(%ebp),%edx
+	movl	-20(%ebp),%ecx
+	leal	(%edx,%ecx),%ecx
+	movl	U_$VIDEO_$$_VPITCH,%edx
+	imull	%edx,%ecx
+	addl	U_$VIDEO_$$_FRAMEBUFFER,%ecx
+	movl	12(%ebp),%edi
+	movl	-16(%ebp),%edx
+	leal	(%edi,%edx),%edx
+	shll	$2,%edx
+	leal	(%ecx,%edx),%edx
+	movl	%eax,(%edx)
+	.balign 4,0x90
+.Lj301:
+	.balign 4,0x90
+.Lj299:
+	cmpl	-16(%ebp),%esi
+	jle	.Lj297
+	jmp	.Lj295
+.Lj297:
+	.balign 4,0x90
+.Lj294:
+	cmpl	-20(%ebp),%ebx
+	jle	.Lj292
+	jmp	.Lj290
+.Lj292:
+	.balign 4,0x90
+.Lj289:
+# [582] end;
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	movl	%ebp,%esp
+	popl	%ebp
+	ret	$8
+
+.section .text.n_video_$$_drawbmpblack$pchar$longint$longint,"x"
+	.balign 16,0x90
+.globl	VIDEO_$$_DRAWBMPBLACK$PCHAR$LONGINT$LONGINT
+VIDEO_$$_DRAWBMPBLACK$PCHAR$LONGINT$LONGINT:
+# [589] begin
+	pushl	%ebp
+	movl	%esp,%ebp
+	leal	-24(%esp),%esp
+# Var Name located at ebp-4, size=OS_32
+# Var X located at ebp-8, size=OS_S32
+# Var Y located at ebp-12, size=OS_S32
+# Var N located at ebp-16, size=OS_S32
+# Var W located at ebp-20, size=OS_S32
+# Var H located at ebp-24, size=OS_S32
+	movl	%eax,-4(%ebp)
+	movl	%edx,-8(%ebp)
+	movl	%ecx,-12(%ebp)
+# [590] W := 0;
+	movl	$0,-20(%ebp)
+# [591] H := 0;
+	movl	$0,-24(%ebp)
+# [592] N := FSReadFile(Name, @AssetBuf[0], SizeOf(AssetBuf));
+	movl	$U_$VIDEO_$$_ASSETBUF,%eax
+	movl	%eax,%edx
+	movl	-4(%ebp),%eax
+	movl	$65536,%ecx
+	call	CDROM_$$_FSREADFILE$PCHAR$PBYTE$LONGWORD$$LONGINT
+	movl	%eax,-16(%ebp)
+# [593] if N < 0 then Exit;
+	cmpl	$0,-16(%ebp)
+	jl	.Lj307
+	jmp	.Lj308
+.Lj307:
+	jmp	.Lj305
+	.balign 4,0x90
+.Lj308:
+# [594] BMPDecode(@AssetBuf[0], LongWord(N), W, H, @DrawBuf[0], SizeOf(DrawBuf) div BPP);
+	leal	-24(%ebp),%eax
+	pushl	%eax
+	movl	$U_$VIDEO_$$_DRAWBUF,%eax
+	pushl	%eax
+	pushl	$16384
+	movl	$U_$VIDEO_$$_ASSETBUF,%eax
+	leal	-20(%ebp),%ecx
+	movl	-16(%ebp),%edx
+	call	BMP_$$_BMPDECODE$PBYTE$LONGWORD$LONGINT$LONGINT$PBYTE$LONGWORD$$BOOLEAN
+# [595] if (W = 0) or (H = 0) then Exit;
+	cmpl	$0,-20(%ebp)
+	je	.Lj309
+	jmp	.Lj310
+.Lj310:
+	cmpl	$0,-24(%ebp)
+	je	.Lj309
+	jmp	.Lj311
+.Lj309:
+	jmp	.Lj305
+	.balign 4,0x90
+.Lj311:
+# [596] DrawSpriteBlack(@DrawBuf[0], W, H, X, Y);
+	pushl	-8(%ebp)
+	pushl	-12(%ebp)
+	movl	$U_$VIDEO_$$_DRAWBUF,%eax
+	movl	-24(%ebp),%ecx
+	movl	-20(%ebp),%edx
+	call	VIDEO_$$_DRAWSPRITEBLACK$PBYTE$LONGINT$LONGINT$LONGINT$LONGINT
+.Lj305:
+# [597] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
@@ -1498,25 +2373,60 @@ U_$VIDEO_$$_RHEIGHT:
 
 .section .bss
 	.balign 4
-# [11] Framebuffer: PByte;
+# [11] VPitch: integer;       // bytes por linha do framebuffer (4 por pixel)
+	.globl U_$VIDEO_$$_VPITCH
+U_$VIDEO_$$_VPITCH:
+	.zero 4
+
+.section .bss
+	.balign 4
+# [12] Framebuffer: PByte;
 	.globl U_$VIDEO_$$_FRAMEBUFFER
 U_$VIDEO_$$_FRAMEBUFFER:
 	.zero 4
 
 .section .bss
-# [32] AssetBuf: array[0..16383] of Byte;
+# [41] AssetBuf: array[0..65535] of Byte;
 U_$VIDEO_$$_ASSETBUF:
-	.zero 16384
+	.zero 65536
 
 .section .bss
-# [33] DrawBuf:  array[0..16383] of Byte;
+# [42] DrawBuf:  array[0..65535] of Byte;
 U_$VIDEO_$$_DRAWBUF:
-	.zero 16384
+	.zero 65536
 
 .section .bss
-# [175] CursorBack: array[0..(CursorW * CursorH) - 1] of Byte;
+# [47] PalR: array[0..255] of Byte;
+U_$VIDEO_$$_PALR:
+	.zero 256
+
+.section .bss
+# [48] PalG: array[0..255] of Byte;
+U_$VIDEO_$$_PALG:
+	.zero 256
+
+.section .bss
+# [49] PalB: array[0..255] of Byte;
+U_$VIDEO_$$_PALB:
+	.zero 256
+
+.section .bss
+	.balign 4
+# [274] CursorBack: array[0..(CursorW * CursorH) - 1] of LongWord;
 U_$VIDEO_$$_CURSORBACK:
-	.zero 324
+	.zero 1296
+
+.section .bss
+	.balign 4
+# [317] ScreenArea: TScreenArea;
+U_$VIDEO_$$_SCREENAREA:
+	.zero 12
+
+.section .bss
+	.balign 4
+# [318] ScreenAreaBuf: array[0..(MaxAreaW * MaxAreaH) - 1] of LongWord;
+U_$VIDEO_$$_SCREENAREABUF:
+	.zero 165000
 # End asmlist al_globals
 # Begin asmlist al_typedconsts
 
@@ -1524,14 +2434,14 @@ U_$VIDEO_$$_CURSORBACK:
 	.balign 2
 TC_$VIDEO_$$_CURSORDATA:
 	.short	0,16384,24576,28672,30720,31744,32256,32512,32640,31744,27648,17920,1536,768,768,0
-# [139] CursorMask: array[0..15] of Word = (
+# [236] CursorMask: array[0..15] of Word = (
 
 .section .data.n_TC_$VIDEO_$$_CURSORMASK,"d"
 	.balign 2
 TC_$VIDEO_$$_CURSORMASK:
 	.short	49152,57344,61440,63488,64512,65024,65280,65408,65472,65472,65024,61184,52992,34688,1920
 	.short	896
-# [146] procedure DrawCursorShape(const Shape: array of Word; X, Y: Integer; Color: Byte);
+# [243] procedure DrawCursorShape(const Shape: array of Word; X, Y: Integer; Color: Byte);
 
 .section .data.n_TC_$VIDEO_$$_FONT8X8,"d"
 TC_$VIDEO_$$_FONT8X8:
@@ -1555,11 +2465,11 @@ TC_$VIDEO_$$_FONT8X8:
 	.byte	24,0,0,0,51,51,51,51,110,0,0,0,51,51,51,30,12,0,0,0,99,107,127,127,54,0,0,0,99,54,28,54,99,0,0,0,51,51,51,62,48
 	.byte	31,0,0,63,25,12,38,63,0,56,12,12,7,12,12,56,0,24,24,24,0,24,24,24,0,7,12,12,56,12,12,7,0,110,59,0,0,0,0,0,0,0,0,0,0
 	.byte	0,0,0,0
-# [307] procedure WriteAt(X, Y: Integer; Text: PChar; Size: Integer);
+# [463] procedure WriteAtCol(X, Y: Integer; Text: PChar; Size: Integer; Color: Byte);
 
 .section .data.n_TC_$VIDEO_$$_SYMBOLFONT,"d"
 TC_$VIDEO_$$_SYMBOLFONT:
 	.byte	35,60,102,195,129,129,195,102,60
-# [350] procedure PutSymbol(X, Y: Integer; Symbol: Char; Size: Integer);
+# [513] procedure PutSymbol(X, Y: Integer; Symbol: Char; Size: Integer);
 # End asmlist al_typedconsts
 

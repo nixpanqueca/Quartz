@@ -157,13 +157,15 @@ OPENFIRMWARE_$$_DELAYMS$LONGINT:
 	.balign 16,0x90
 .globl	OPENFIRMWARE_$$_OFINIT
 OPENFIRMWARE_$$_OFINIT:
-# [70] begin
+# [71] begin
 	pushl	%ebp
 	movl	%esp,%ebp
-	leal	-8(%esp),%esp
+	leal	-16(%esp),%esp
 # Var CX located at ebp-4, size=OS_S32
 # Var CY located at ebp-8, size=OS_S32
-# [71] CX := (RWidth - 32) div 2;
+# Var PrevShellKey located at ebp-12, size=OS_8
+# Var OpenShellKey located at ebp-16, size=OS_8
+# [72] CX := (RWidth - 32) div 2;
 	movl	U_$VIDEO_$$_RWIDTH,%eax
 	leal	-32(%eax),%eax
 	movl	%eax,%edx
@@ -171,7 +173,7 @@ OPENFIRMWARE_$$_OFINIT:
 	addl	%edx,%eax
 	sarl	$1,%eax
 	movl	%eax,-4(%ebp)
-# [72] CY := (RHeight - 32) div 2;
+# [73] CY := (RHeight - 32) div 2;
 	movl	U_$VIDEO_$$_RHEIGHT,%eax
 	leal	-32(%eax),%eax
 	movl	%eax,%edx
@@ -179,75 +181,75 @@ OPENFIRMWARE_$$_OFINIT:
 	addl	%edx,%eax
 	sarl	$1,%eax
 	movl	%eax,-8(%ebp)
-# [73] DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+# [74] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld1,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [74] DelayMS(400);
+# [75] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [75] DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+# [76] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld2,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [76] DelayMS(400);
+# [77] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [77] DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+# [78] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld1,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [78] DelayMS(400);
+# [79] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [79] DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+# [80] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld2,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [80] DelayMS(400);
+# [81] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [81] DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+# [82] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld1,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [82] DelayMS(400);
+# [83] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [83] DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+# [84] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld2,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [84] DelayMS(400);
+# [85] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [85] DrawBMP('SPRITES\FLOPPY.BMP', CX, CY);
+# [86] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld1,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [86] DelayMS(400);
+# [87] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [87] DrawBMP('SPRITES\FLOPPY@2.BMP', CX, CY);
+# [88] DrawBMP('SYSTEM\COMPILED\PRISM\BITMAP\FLOPPY@2.BMP', CX, CY);
 	movl	-8(%ebp),%ecx
 	movl	-4(%ebp),%edx
 	movl	$_$OPENFIRMWARE$_Ld2,%eax
 	call	VIDEO_$$_DRAWBMP$PCHAR$LONGINT$LONGINT
-# [88] DelayMS(400);
+# [89] DelayMS(400);
 	movl	$400,%eax
 	call	OPENFIRMWARE_$$_DELAYMS$LONGINT
-# [89] KeyboardPoll;
+# [90] KeyboardPoll;
 	call	KEYBOARD_$$_KEYBOARDPOLL
-# [90] if ScanIsPressed(SCAN_LALT) and KeyIsPressed('o') and KeyIsPressed('f') then
+# [92] OpenShellKey := (SpecialKeyIsPressed(SCAN_LALT) and KeyIsPressed('o') and KeyIsPressed('f'))
 	movb	$56,%al
-	call	KEYBOARD_$$_SCANISPRESSED$BYTE$$BOOLEAN
+	call	KEYBOARD_$$_SPECIALKEYISPRESSED$BYTE$$BOOLEAN
 	testb	%al,%al
 	jne	.Lj24
 	jmp	.Lj25
@@ -263,13 +265,43 @@ OPENFIRMWARE_$$_OFINIT:
 	testb	%al,%al
 	jne	.Lj27
 	jmp	.Lj25
+.Lj25:
+# [93] or SpecialKeyIsPressed(SCAN_F9);
+	movb	$67,%al
+	call	KEYBOARD_$$_SPECIALKEYISPRESSED$BYTE$$BOOLEAN
+	testb	%al,%al
+	jne	.Lj27
+	jmp	.Lj28
 .Lj27:
-# [92] ClearScreen($0F);
+	movb	$1,-16(%ebp)
+	jmp	.Lj29
+.Lj28:
+	movb	$0,-16(%ebp)
+.Lj29:
+# [94] if KeyIsPressed('o') and KeyIsPressed('f') then
+	movb	$111,%al
+	call	KEYBOARD_$$_KEYISPRESSED$CHAR$$BOOLEAN
+	testb	%al,%al
+	jne	.Lj30
+	jmp	.Lj31
+.Lj30:
+	movb	$102,%al
+	call	KEYBOARD_$$_KEYISPRESSED$CHAR$$BOOLEAN
+	testb	%al,%al
+	jne	.Lj32
+	jmp	.Lj31
+.Lj32:
+# [96] ShellLoop;
+	call	OPENSHELL_$$_SHELLLOOP
+# [97] ClearScreen($0F);
 	movb	$15,%al
 	call	VIDEO_$$_CLEARSCREEN$BYTE
 	.balign 4,0x90
-.Lj25:
-# [94] end;
+.Lj31:
+# [99] PrevShellKey := OpenShellKey;
+	movb	-16(%ebp),%al
+	movb	%al,-12(%ebp)
+# [100] end;
 	movl	%ebp,%esp
 	popl	%ebp
 	ret
@@ -294,12 +326,12 @@ TC_$OPENFIRMWARE_$$_MACGRAY:
 	.balign 4
 .globl	_$OPENFIRMWARE$_Ld1
 _$OPENFIRMWARE$_Ld1:
-	.ascii	"SPRITES\\FLOPPY.BMP\000"
+	.ascii	"SYSTEM\\COMPILED\\PRISM\\BITMAP\\FLOPPY.BMP\000"
 
 .section .rodata.n__$OPENFIRMWARE$_Ld2,"d"
 	.balign 4
 .globl	_$OPENFIRMWARE$_Ld2
 _$OPENFIRMWARE$_Ld2:
-	.ascii	"SPRITES\\FLOPPY@2.BMP\000"
+	.ascii	"SYSTEM\\COMPILED\\PRISM\\BITMAP\\FLOPPY@2.BMP\000"
 # End asmlist al_typedconsts
 
