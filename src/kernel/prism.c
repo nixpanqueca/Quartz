@@ -1,8 +1,11 @@
 /* Cubic System Software - Prism Interface */
 
+#include "quartz.h"
 #include "prism.h"
 #include "framebuffer.h"
 #include "fs.h"
+
+// Code by NixPanqueca -w-
 
 static uint32_t blend_color(uint32_t c1, uint32_t c2, uint32_t t) {
     uint32_t r1 = (c1 >> 16) & 0xFF;
@@ -27,27 +30,11 @@ static void DrawMenubar(void) {
     if (menubar) {
         FB_drawbmp(12, 2, (const void*)(uint32_t)menubar->mod_start);
     } else {
-        FB_write(10,1, "File not found!", 0x00000000, 1);
+        kernel_crash(0x00194);
     }
 }
 
-static void DrawDock(void) {
-    // Dock background
-    FB_drawrect(0,screen_height-24, screen_width/2 -16, screen_height, 0x00000000);
-    FB_drawrect(0,screen_height-23, screen_width/2 -17, screen_height, 0x00C0C0C0); // dock
-    FB_drawrect(0,screen_height-22, screen_width/2 -19, screen_height-22, 0x00FFFFFF);
-
-    // Dock tiles
-    const fs_file_t* tile1 = fs_find("/system/compiled/prism/bitmap/dock/tileT1.bmp");
-    const fs_file_t* ratio = fs_find("/system/compiled/prism/bitmap/dock/ratioOUTTER.bmp");
-    const fs_file_t* ratio2 = fs_find("/system/compiled/prism/bitmap/dock/ratioINNER.bmp");
-    if (ratio && ratio2) {
-        FB_drawbmp(0,screen_height-24, (const void*)(uint32_t)ratio->mod_start);
-        FB_drawbmp(5,screen_height-14, (const void*)(uint32_t)ratio2->mod_start);
-    }
-}
-
-static char current_title[64] = "Prism";
+char current_title[64];
 
 void PrismSetTitle(const char* title) {
     int i;
@@ -137,69 +124,17 @@ void PrismUpdateClock(void) {
     uint32_t clock_x = sep_left - 8 - clock_w - 8;
 
     // clear old clock area with background
-    FB_drawrect(clock_x, 0, clock_x + clock_w + 7, 0, 0x00FFFFFF);
-    FB_drawrect(clock_x, 0, clock_x + clock_w + 7, 19, 0x00DDDDDD);
+    FB_drawrect(clock_x, 1, clock_x + clock_w + 7, 17, 0x00DDDDDD);
 
     FB_write(clock_x, 3, clock_str, 0x00000000, 1);
 }
 
-static void RoundBorders(void) {
-    uint32_t r = 7;
-    uint32_t x, y;
-
-    for (y = 0; y <= r; y++) {
-        for (x = 0; x <= r; x++) {
-            uint32_t dx = r - x;
-            uint32_t dy = r - y;
-            uint32_t d2 = dx * dx + dy * dy;
-            if (d2 > r * r) {
-                uint32_t d = 0;
-                while (d * d < d2 && d < 20) d++;
-                uint32_t edge_dist = d - r;
-                uint32_t color;
-                if (edge_dist <= 2) {
-                    color = blend_color(0x00999999, 0x00666666, edge_dist * 127);
-                } else if (edge_dist <= 4) {
-                    color = blend_color(0x00666666, 0x00333333, (edge_dist - 2) * 127);
-                } else {
-                    color = blend_color(0x00333333, 0x00000000, (edge_dist - 4) * 127);
-                }
-                FB_drawrect(x, y, x, y, color);
-            }
-        }
-    }
-
-    for (y = 0; y <= r; y++) {
-        for (x = 0; x <= r; x++) {
-            uint32_t sx = screen_width - 1 - r + x;
-            uint32_t dx = x;
-            uint32_t dy = r - y;
-            uint32_t d2 = dx * dx + dy * dy;
-            if (d2 > r * r) {
-                uint32_t d = 0;
-                while (d * d < d2 && d < 20) d++;
-                uint32_t edge_dist = d - r;
-                uint32_t color;
-                if (edge_dist <= 2) {
-                    color = blend_color(0x00999999, 0x00666666, edge_dist * 127);
-                } else if (edge_dist <= 4) {
-                    color = blend_color(0x00666666, 0x00333333, (edge_dist - 2) * 127);
-                } else {
-                    color = blend_color(0x00333333, 0x00000000, (edge_dist - 4) * 127);
-                }
-                FB_drawrect(sx, y, sx, y, color);
-            }
-        }
-    }
-}
-
 void PrismInit(void) {
-    FB_drawrect(0, 0, screen_width, screen_height, 0x009999cb);
+    FB_drawrect(0, 0, screen_width, screen_height, 0x0063639C);
     PrismSetTitle(current_title);
-    DrawDock();
 }
 
-void PrismUpdate(void){
+void FB_update(void){
+    PrismUpdateClock();
     PrismSetTitle(current_title);
-    DrawDock();
 }

@@ -1,4 +1,4 @@
 name=Prism
 version=1.0
-type=app
-entry=prism_service
+type=service
+path=/system/compiled/prism/prism

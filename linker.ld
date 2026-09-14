@@ -21,14 +21,10 @@ SECTIONS
     .data BLOCK(4K) : ALIGN(4K)
     {
         *(.data)
-    }
-
-    __services_start = .;
-    .services BLOCK(4K) : ALIGN(4K)
-    {
+        __services_start = .;
         *(.services)
+        __services_end = .;
     }
-    __services_end = .;
 
     .bss BLOCK(4K) : ALIGN(4K)
     {

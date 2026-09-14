@@ -320,14 +320,18 @@ static void cursor_draw(int x, int y) {
 }
 
 void fb_cursor_update(void) {
+    if (!fb || !fb_ready) return;
     int mx = mouse_x();
     int my = mouse_y();
-
-    if (mx == cursor_px && my == cursor_py) return;
 
     cursor_restore_bg();
     cursor_save_bg(mx, my);
     cursor_draw(mx, my);
+}
+
+void fb_cursor_invalidate(void) {
+    cursor_px = -1;
+    cursor_py = -1;
 }
 
 /* ---- BMP Loader ---- */

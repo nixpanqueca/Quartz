@@ -8,41 +8,38 @@
 #define SERVICE_TYPE_APP     0
 #define SERVICE_TYPE_SERVICE 1
 
-#define SERVICE_STATE_STOPPED  0
-#define SERVICE_STATE_RUNNING  1
-
 typedef struct {
     const char* name;
-    const char* version;
+    void (*func)(void);
+} service_func_t;
+
+typedef struct service_entry {
+    const char* path;
+    const char* name;
     uint32_t type;
     void (*init)(void);
-    void (*start)(void);
-    void (*stop)(void);
     void (*shutdown)(void);
+    const service_func_t* funcs;
 } service_entry_t;
 
-#define SERVICE_REGISTER(n, v, t, init_fn, start_fn, stop_fn, shutdown_fn) \
-    static const service_entry_t __service_##n \
+#define SERVICE_REGISTER(p, n, t, f) \
+    static const service_entry_t __service_entry \
     __attribute__((used, section(".services"))) = { \
-        .name = #n, \
-        .version = v, \
+        .path = p, \
+        .name = n, \
         .type = t, \
-        .init = init_fn, \
-        .start = start_fn, \
-        .stop = stop_fn, \
-        .shutdown = shutdown_fn \
+        .init = Init, \
+        .shutdown = Shutdown, \
+        .funcs = f \
     };
-
-void service_init_all(void);
-void service_start_all(void);
-void service_stop_all(void);
-void service_shutdown_all();
 
 uint32_t service_count(void);
 const service_entry_t* service_get(uint32_t index);
-const service_entry_t* service_find(const char* name);
+const service_entry_t* service_find(const char* path);
 
-void service_start(const char* name);
-void service_stop(const char* name);
+int service_run(const char* path);
+int service_run_on(const char* path, int thread_id);
+int service_stop(const char* path);
+int service_call(const char* path, const char* func_name);
 
 #endif

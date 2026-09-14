@@ -1,0 +1,20 @@
+
+[QUARTZ] Boot start
+[QUARTZ] Flags: 0x0000126F
+[QUARTZ] FB addr=0xFD000000
+[QUARTZ] FB pitch=3200
+[QUARTZ] FB w=800 h=600 bpp=32
+[QUARTZ] FB ready!
+[FS] init
+[FS] system/backgrounds/CubicDefault.bmp
+[FS] system/compiled/bitmap/face@2x.bmp
+[FS] system/compiled/bitmap/floppy.bmp
+[FS] system/compiled/bitmap/floppy@2.bmp
+[FS] system/compiled/bitmap/sad@2x.bmp
+[FS] system/compiled/prism/bitmap/dock/ratioINNER.bmp
+[FS] system/compiled/prism/bitmap/dock/ratioOUTTER.bmp
+[FS] system/compiled/prism/bitmap/dock/tileT1.bmp
+[FS] system/compiled/prism/bitmap/icon.bmp
+[FS] system/compiled/prism/bitmap/separator.bmp
+[FS] system/compiled/prism/prism.service
+[FS] ; files loaded

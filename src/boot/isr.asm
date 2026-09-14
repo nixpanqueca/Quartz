@@ -1,4 +1,4 @@
-; Cubic System Software - ISR Stubs
+; Cubic System Software - ISR Stubs + Thread Context Switch
 
 [bits 32]
 
@@ -7,17 +7,43 @@ global g_scancode
 section .data
 g_scancode: db 0
 
-; ISR 33 - IRQ1 (Keyboard)
 section .text
+
+; ISR 32 - IRQ0 (PIT Timer) - triggers thread scheduler
+; Passes current ESP to scheduler, loads returned new ESP
+extern thread_scheduler
+global isr32
+isr32:
+    pusha
+    mov al, 0x20
+    out 0x20, al
+    mov eax, esp
+    push eax
+    call thread_scheduler
+    add esp, 4
+    mov esp, eax
+    popa
+    iret
+
+; ISR 33 - IRQ1 (Keyboard)
 global isr33
 isr33:
     pusha
-    mov dx, 0x3F8
-    mov al, 'K'
-    out dx, al
     in al, 0x60
     mov [g_scancode], al
     mov al, 0x20
+    out 0x20, al
+    popa
+    iret
+
+; ISR 44 - IRQ12 (Mouse)
+extern mouse_handler
+global isr44
+isr44:
+    pusha
+    call mouse_handler
+    mov al, 0x20
+    out 0xA0, al
     out 0x20, al
     popa
     iret
@@ -53,20 +79,20 @@ ISR_STUB 4
 ISR_STUB 5
 ISR_STUB 6
 ISR_STUB 7
-ISR_STUB_ERR 8    ; Double Fault (error code)
+ISR_STUB_ERR 8
 ISR_STUB 9
-ISR_STUB_ERR 10   ; Invalid TSS (error code)
-ISR_STUB_ERR 11   ; Segment Not Present (error code)
-ISR_STUB_ERR 12   ; Stack-Segment Fault (error code)
-ISR_STUB_ERR 13   ; General Protection Fault (error code)
-ISR_STUB_ERR 14   ; Page Fault (error code)
+ISR_STUB_ERR 10
+ISR_STUB_ERR 11
+ISR_STUB_ERR 12
+ISR_STUB_ERR 13
+ISR_STUB_ERR 14
 ISR_STUB 15
-ISR_STUB_ERR 17   ; Alignment Check (error code)
+ISR_STUB_ERR 17
 ISR_STUB 16
 ISR_STUB 18
 ISR_STUB 19
 ISR_STUB 20
-ISR_STUB_ERR 21   ; Machine Check (error code)
+ISR_STUB_ERR 21
 ISR_STUB 22
 ISR_STUB 23
 ISR_STUB 24
@@ -75,27 +101,11 @@ ISR_STUB 26
 ISR_STUB 27
 ISR_STUB 28
 ISR_STUB 29
-ISR_STUB_ERR 30   ; Security Exception (error code)
+ISR_STUB_ERR 30
 ISR_STUB 31
-ISR_STUB 32
 ISR_STUB 34
 ISR_STUB 35
 ISR_STUB 36
 ISR_STUB 37
 ISR_STUB 38
 ISR_STUB 39
-
-; ISR 44 - IRQ12 (Mouse)
-extern mouse_handler
-global isr44
-isr44:
-    pusha
-    mov dx, 0x3F8
-    mov al, 'Z'
-    out dx, al
-    call mouse_handler
-    mov al, 0x20
-    out 0xA0, al
-    out 0x20, al
-    popa
-    iret

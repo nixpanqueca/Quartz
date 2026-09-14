@@ -110,8 +110,6 @@ void keyboard_init(void) {
     uint16_t sel;
     int i;
 
-    dbg('A');
-
     __asm__ __volatile__("mov %%cs, %0" : "=r"(cs_val));
     sel = cs_val;
 
@@ -120,10 +118,8 @@ void keyboard_init(void) {
     for (i = 0; i < 256; i++) {
         idt_set_gate(i, 0, sel, 0);
     }
-    dbg('B');
 
     pic_remap();
-    dbg('C');
 
     for (i = 0; i < 32; i++) {
         uint32_t addr;
@@ -173,21 +169,16 @@ void keyboard_init(void) {
     idt_set_gate(38, (uint32_t)isr38, sel, 0x8E);
     idt_set_gate(39, (uint32_t)isr39, sel, 0x8E);
     idt_set_gate(44, (uint32_t)isr44, sel, 0x8E);
-    dbg('D');
-
-    dbg('S'); dbg_hex(sel);
-    dbg('I'); dbg_hex((uint32_t)isr33);
-    dbg('L'); dbg_hex(idtp.base);
 
     __asm__ __volatile__("cli\n\t"
                          "lidt (%0)\n\t"
                          : : "r"(&idtp)
                          : "memory");
-    dbg('E');
 
     uint8_t mask = inb(0x21);
-    mask &= ~(1 << 1);
-    mask &= ~(1 << 2);
+    mask &= ~(1 << 0); /* unmask IRQ0 (PIT timer) */
+    mask &= ~(1 << 1); /* unmask IRQ1 (keyboard) */
+    mask &= ~(1 << 2); /* unmask IRQ2 (cascade) */
     outb(0x21, mask);
 
     uint8_t slave_mask = inb(0xA1);
@@ -195,10 +186,13 @@ void keyboard_init(void) {
     outb(0xA1, slave_mask);
 
     for (i = 0; i < 256; i++) key_states[i] = 0;
-    dbg('F');
+
+    /* PIT channel 0: ~100Hz timer (1193182 / 11932 = ~100Hz) */
+    outb(0x43, 0x36);           /* channel 0, lobyte/hibyte, rate generator */
+    outb(0x40, 0x34);           /* divisor low byte (11932 = 0x2E94) */
+    outb(0x40, 0x2E);           /* divisor high byte */
 
     __asm__ __volatile__("sti");
-    dbg('G');
 }
 
 void keyboard_poll(void) {

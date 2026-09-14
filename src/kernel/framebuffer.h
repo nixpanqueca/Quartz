@@ -29,6 +29,7 @@ void delay(uint32_t ms);
 
 /* Cursor */
 void fb_cursor_update(void);
+void fb_cursor_invalidate(void);
 
 /* BMP drawing */
 void FB_drawbmp(uint32_t x, uint32_t y, const void* bmp_data);

@@ -1,5 +1,6 @@
 /* Cubic System Software - Quartz Kernel */
 
+#include "quartz.h"
 #include "framebuffer.h"
 #include "openfirmware.h"
 #include "keyboard.h"
@@ -7,9 +8,18 @@
 #include "mouse.h"
 #include "fs.h"
 #include "service.h"
+#include "thread.h"
+
+// Code by NixPanqueca -w-
+
+void kernel_crash(uint32_t crashcode) {
+    MacCrash(crashcode);
+}
 
 void quartz_main(uint32_t mb_magic, uint32_t mb_info_addr) {
     int fb_ok = framebuffer_init(mb_magic, mb_info_addr);
+
+    fs_init(mb_info_addr);
 
     if (fb_ok) {
         fb_clear(255, 255, 255);
@@ -17,9 +27,7 @@ void quartz_main(uint32_t mb_magic, uint32_t mb_info_addr) {
         mouse_init();
     }
 
-    fs_init(mb_info_addr);
-    /* service_init_all();
-    service_start_all(); */
+    thread_init();
 
     // boot background
     FB_drawrect(0,0, screen_width, screen_height, 0x009999cb);
@@ -35,21 +43,21 @@ void quartz_main(uint32_t mb_magic, uint32_t mb_info_addr) {
     FB_drawrect(w/7+41, h/6+1, w*6/7-41, h*3/4-89, 0x00B2B2B2);
     FB_drawrect(w/7+42, h/6+2, w*6/7-41, h*3/4-89, 0x00FFFFFF);
     FB_write(w/2 - 14*8/2, h/2 - 8+95, "Starting Up...", 0x00000000, 1);
-    fb_cursor_update();
 
-    delay(2000);
+    /* Boot delay - update cursor periodically so mouse moves */
+    for (uint32_t i = 0; i < 20; i++) {
+        fb_cursor_update();
+        delay(100);
+    }
 
     PrismInit();
+    service_run_on("/system/compiled/prism/prism.service", 2);
+    fb_cursor_invalidate();
 
-    /* Main loop */
     while (1) {
-        PrismUpdateClock();
-        PrismUpdate();
+        asm volatile("cli");
         fb_cursor_update();
-        keyboard_poll();
-        if (keyboard_key_pressed('h')) {
-            FB_write(0,50, "Happy Mac!", 0x00000000, 1);
-        }
-        __asm__ __volatile__("hlt");
+        asm volatile("sti");
+        delay(1);
     }
 }
