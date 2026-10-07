@@ -1,0 +1,7 @@
+# Build output, entirely reproducible from `make iso`
+build/
+
+# Disk mirror generated from services/prismtu/manifest.txt.
+# The Prism one is tracked on purpose: it is the record of what the graphical
+# build shipped on the boot disk.
+disk/system/compiled/prismtu/

@@ -1,99 +1,54 @@
 /* Cubic System Software - Filesystem (multiboot modules) */
+/* GRUB loads files as modules before handing over; this indexes them so the
+ * shell can list and dump them. */
 
 #include "fs.h"
-#include "framebuffer.h"
-#include <stdint.h>
+#include "console.h"
+#include "multiboot.h"
 
 #define MAX_MODULES 32
 
 static fs_file_t files[MAX_MODULES];
 static int file_count = 0;
 
-#define MB_FLAG_MODS (1 << 3)
-
-typedef struct {
-    uint32_t mod_start;
-    uint32_t mod_end;
-    uint32_t cmdline;
-    uint32_t pad;
-} __attribute__((packed)) multiboot_mod_t;
-
-typedef struct {
-    uint32_t flags;
-    uint32_t mem_lower;
-    uint32_t mem_upper;
-    uint32_t boot_device;
-    uint32_t cmdline;
-    uint32_t mods_count;
-    uint32_t mods_addr;
-    uint32_t syms[4];
-    uint32_t mmap_length;
-    uint32_t mmap_addr;
-    uint32_t drives_length;
-    uint32_t drives_addr;
-    uint32_t config_table;
-    uint32_t boot_loader_name;
-    uint32_t apm_table;
-    uint32_t vbe_control_info;
-    uint32_t vbe_mode_info;
-    uint16_t vbe_mode;
-    uint16_t vbe_interface_seg;
-    uint16_t vbe_interface_off;
-    uint16_t vbe_interface_len;
-    uint64_t framebuffer_addr;
-    uint32_t framebuffer_pitch;
-    uint32_t framebuffer_width;
-    uint32_t framebuffer_height;
-    uint8_t  framebuffer_bpp;
-    uint8_t  framebuffer_type;
-} __attribute__((packed)) multiboot_info_t;
-
-static void outb(uint16_t port, uint8_t val) {
-    __asm__ __volatile__("outb %0, %1" : : "a"(val), "Nd"(port));
-}
-
-static uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ __volatile__("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
-
-static void dbg(char c) {
-    while (!(inb(0x3F8 + 5) & 0x20));
-    outb(0x3F8, c);
-}
-
-static void dbg_str(const char* s) {
-    for (int i = 0; s[i]; i++) dbg(s[i]);
-}
-
 void fs_init(uint32_t mb_info_addr) {
-    multiboot_info_t* mb = (multiboot_info_t*)mb_info_addr;
+    const multiboot_info_t* mb = (const multiboot_info_t*)(uintptr_t)mb_info_addr;
 
-    dbg_str("[FS] init\n");
+    file_count = 0;
 
-    if (!(mb->flags & MB_FLAG_MODS)) {
-        dbg_str("[FS] no modules\n");
+    if (!(mb->flags & MB_MODS) || mb->mods_count == 0) {
+        console_write("[boot] GRUB passed over no modules\n");
         return;
     }
 
     uint32_t count = mb->mods_count;
-    multiboot_mod_t* mods = (multiboot_mod_t*)(uint32_t)mb->mods_addr;
+    const multiboot_module_t* modules =
+        (const multiboot_module_t*)(uintptr_t)mb->mods_addr;
 
-    if (count > MAX_MODULES) count = MAX_MODULES;
-    file_count = (int)count;
-
-    for (int i = 0; i < file_count; i++) {
-        files[i].mod_start = mods[i].mod_start;
-        files[i].mod_end = mods[i].mod_end;
-        files[i].name = (const char*)(uint32_t)mods[i].cmdline;
-
-        dbg_str("[FS] "); dbg_str(files[i].name); dbg('\n');
+    if (count > MAX_MODULES) {
+        console_printf("[boot] only tracking the first %d of %u modules\n",
+                       MAX_MODULES, count);
+        count = MAX_MODULES;
     }
 
-    dbg_str("[FS] ");
-    dbg('0' + file_count);
-    dbg_str(" files loaded\n");
+    for (uint32_t i = 0; i < count; i++) {
+        if (modules[i].mod_end <= modules[i].mod_start)
+            continue;
+
+        files[file_count].mod_start = modules[i].mod_start;
+        files[file_count].mod_end = modules[i].mod_end;
+        files[file_count].name =
+            (const char*)(uintptr_t)modules[i].cmdline;
+
+        /* GRUB leaves cmdline empty if the module was declared without a
+         * destination name, and every caller here assumes a valid string. */
+        if (!files[file_count].name)
+            files[file_count].name = "unnamed";
+
+        file_count++;
+    }
+
+    console_printf("[boot] %d module(s) on disk\n", file_count);
 }
 
 int fs_file_count(void) {
@@ -106,12 +61,65 @@ const fs_file_t* fs_get_file(int index) {
 }
 
 const fs_file_t* fs_find(const char* name) {
-    if (*name == '/') name++;
+    if (!name)
+        return 0;
+
+    if (*name == '/')
+        name++;                       /* tolerate both /system/x and system/x */
+
     for (int i = 0; i < file_count; i++) {
         const char* a = files[i].name;
         const char* b = name;
+
         while (*a && *b && *a == *b) { a++; b++; }
         if (*a == *b) return &files[i];
     }
+
+    return 0;
+}
+
+uint32_t fs_size(const fs_file_t* file) {
+    if (!file || file->mod_end <= file->mod_start)
+        return 0;
+
+    return file->mod_end - file->mod_start;
+}
+
+/* Compares the last path component of a module name against a bare file name. */
+static int tail_is(const char* path, const char* basename) {
+    const char* tail = path;
+
+    for (const char* p = path; *p; p++) {
+        if (*p == '/')
+            tail = p + 1;
+    }
+
+    const char* a = tail;
+    const char* b = basename;
+
+    while (*a && *b && *a == *b) { a++; b++; }
+
+    return *a == *b;
+}
+
+/* Finds a file anywhere on the disk by its name alone, ignoring where it sits.
+ *
+ * The modules are a flat list with no directory tree behind them, so "search
+ * every subfolder" means comparing the last path component of each name
+ * rather than walking a hierarchy. Two files with the same name in different
+ * folders both match and the first one loaded wins. */
+const fs_file_t* fs_find_basename(const char* basename) {
+    if (!basename || !*basename)
+        return 0;
+
+    /* Skip a leading slash so both prismtu.service and /prismtu.service work. */
+    if (*basename == '/')
+        basename++;
+
+    for (int i = 0; i < file_count; i++) {
+        if (tail_is(files[i].name, basename))
+            return &files[i];
+    }
+
     return 0;
 }

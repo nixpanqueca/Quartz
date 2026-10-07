@@ -1,7 +1,6 @@
 /* Cubic System Software - Service Manager */
 
 #include "service.h"
-#include "framebuffer.h"
 #include "thread.h"
 
 extern service_entry_t __services_start[];
@@ -14,6 +13,14 @@ uint32_t service_count(void) {
 const service_entry_t* service_get(uint32_t index) {
     if (index >= service_count()) return 0;
     return &__services_start[index];
+}
+
+const char* service_type_name(uint32_t type) {
+    switch (type) {
+        case SERVICE_TYPE_APP:     return "app";
+        case SERVICE_TYPE_SERVICE: return "service";
+        default:                   return "?";
+    }
 }
 
 static int str_eq(const char* a, const char* b) {
@@ -37,6 +44,8 @@ int service_run(const char* path) {
 }
 
 int service_run_on(const char* path, int thread_id) {
+    (void)thread_id;                /* the scheduler picks the slot it wants */
+
     const service_entry_t* svc = service_find(path);
     if (!svc || !svc->init) return -1;
     return thread_create(svc->name, svc->init);

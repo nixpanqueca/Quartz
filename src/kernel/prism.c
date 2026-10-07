@@ -1,5 +1,16 @@
 /* Cubic System Software - Prism Interface */
 
+/* PARKED, NOT BUILT.
+ *
+ * This is the graphical Prism: menubar, clock, dock. Every line of it goes
+ * through framebuffer.c, and that file is gone, so this does not compile and
+ * the Makefile does not list it. It stays in the tree as the reference for what
+ * the framebuffer layer has to grow back: initialise from
+ * mb->framebuffer_addr and the pitch, then these calls.
+ *
+ * Until then PrismT is the desktop that actually runs: services/prismtu/.
+ */
+
 #include "quartz.h"
 #include "prism.h"
 #include "framebuffer.h"

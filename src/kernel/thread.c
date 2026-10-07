@@ -1,98 +1,131 @@
 /* Cubic System Software - Thread Scheduler */
 
 #include "thread.h"
+#include "console.h"
 
 static thread_t threads[THREAD_MAX];
 static int current_thread = 0;
 
 void thread_init(void) {
-    for (int i = 0; i < THREAD_MAX; i++)
+    for (int i = 0; i < THREAD_MAX; i++) {
         threads[i].state = THREAD_UNUSED;
+        threads[i].esp = 0;
+        threads[i].eip = 0;
+        threads[i].name[0] = '\0';
+    }
+
     threads[0].state = THREAD_RUNNING;
+    threads[0].eip = 0;
+
+    const char* name = "kernel";
+    for (int i = 0; name[i] && i < 31; i++)
+        threads[0].name[i] = name[i];
+    threads[0].name[31] = '\0';
+
     current_thread = 0;
 }
 
 int thread_create(const char* name, void (*entry)(void)) {
     int id = -1;
+
     for (int i = 1; i < THREAD_MAX; i++) {
         if (threads[i].state == THREAD_UNUSED) {
             id = i;
             break;
         }
     }
-    if (id < 0) return -1;
 
-    /* Set up initial stack to look like ISR frame.
+    if (id < 0) {
+        console_printf("[thread] out of slots, cannot create '%s'\n",
+                       name ? name : "?");
+        return -1;
+    }
+
+    /* The stack is shaped to look like the frame the timer ISR leaves behind,
+     * so the very first switch into this thread runs:
      *
-     * When first scheduled, the timer ISR does:
-     *   pusha           <- saves fake registers (ESP points here)
-     *   push esp        <- pushes pointer to pusha frame
-     *   call scheduler  <- pushes return address, scheduler saves old_esp and returns new_esp
-     *   mov esp, eax    <- loads this thread's ESP (points to our fake pusha frame)
-     *   popa            <- restores fake registers
-     *   iret            <- pops EIP/CS/EFLAGS -> jumps to entry()
+     *   mov esp, eax     load our fake ESP
+     *   popa             restore the zeroed registers
+     *   iret             pop EFLAGS/CS/EIP and jump to entry()
      *
-     * Stack layout (high addr -> low addr):
-     *   EFLAGS CS EIP     <- iret frame
-     *   EDI ESI EBP skip EBX EDX ECX EAX <- pusha frame (ESP points here)
-     *
-     * CS is read from the running kernel to avoid hardcoding.
+     * Laid out from high address to low:
+     *   EFLAGS  CS  EIP      <- consumed by iret
+     *   EDI ESI EBP skip EBX EDX ECX EAX  <- consumed by popa
      */
-    uint32_t* stack = (uint32_t*)(&threads[id].stack[THREAD_STACK]);
+    /* Walk to the top of the stack in bytes first: this is a uint32_t*, so
+     * adding THREAD_STACK to it directly would step 4 bytes at a time and land
+     * 16KB past the array, in the middle of the threads[] bookkeeping. */
+    uint8_t* top = (uint8_t*)(void*)threads[id].stack + THREAD_STACK;
+    uint32_t* stack = (uint32_t*)(void*)top;
 
-    uint16_t cs_val;
-    __asm__ __volatile__("mov %%cs, %0" : "=r"(cs_val));
+    uint16_t code_segment;
+    __asm__ __volatile__("mov %%cs, %0" : "=r"(code_segment));
 
-    /* iret frame (pushed first, at higher addresses) */
-    *(--stack) = 0x00000202;                  /* EFLAGS: IF=1 */
-    *(--stack) = (uint32_t)cs_val;            /* CS: kernel code segment */
-    *(--stack) = (uint32_t)entry;             /* EIP = entry point */
+    *(--stack) = 0x00000202;                  /* EFLAGS with IF set */
+    *(--stack) = (uint32_t)code_segment;      /* CS: whatever we are running in */
+    *(--stack) = (uint32_t)(uintptr_t)entry;  /* EIP: the new thread's entry */
 
-    /* pusha frame (on top, ESP will point here) */
-    *(--stack) = 0;  /* EDI */
-    *(--stack) = 0;  /* ESI */
-    *(--stack) = 0;  /* EBP */
-    *(--stack) = 0;  /* skip (ESP) */
-    *(--stack) = 0;  /* EBX */
-    *(--stack) = 0;  /* EDX */
-    *(--stack) = 0;  /* ECX */
-    *(--stack) = 0;  /* EAX */
+    *(--stack) = 0;   /* EDI */
+    *(--stack) = 0;   /* ESI */
+    *(--stack) = 0;   /* EBP */
+    *(--stack) = 0;   /* ESP, skipped by popa */
+    *(--stack) = 0;   /* EBX */
+    *(--stack) = 0;   /* EDX */
+    *(--stack) = 0;   /* ECX */
+    *(--stack) = 0;   /* EAX */
 
-    threads[id].esp = (uint32_t)stack;
+    threads[id].esp = (uint32_t)(uintptr_t)stack;
+    threads[id].eip = (uint32_t)(uintptr_t)entry;
     threads[id].state = THREAD_READY;
 
-    int i;
-    for (i = 0; i < 31 && name[i]; i++)
-        threads[id].name[i] = name[i];
+    int i = 0;
+
+    if (name) {
+        for (; name[i] && i < 31; i++)
+            threads[id].name[i] = name[i];
+    }
+
     threads[id].name[i] = '\0';
+
+    console_printf("[thread] created '%s' as id %d\n", threads[id].name, id);
 
     return id;
 }
 
 void thread_exit(void) {
-    threads[current_thread].state = THREAD_UNUSED;
+    console_printf("[thread] '%s' exiting\n", threads[current_thread].name);
+
+    threads[current_thread].state = THREAD_DEAD;
+
+    /* The scheduler skips DEAD threads, so returning here is enough: the next
+     * timer tick moves us off this stack. Nothing may run after this point. */
 }
 
 uint32_t thread_scheduler(uint32_t old_esp) {
-    /* Save current thread's ESP from the ISR frame */
     if (threads[current_thread].state == THREAD_RUNNING) {
         threads[current_thread].esp = old_esp;
         threads[current_thread].state = THREAD_READY;
     }
 
-    /* Find next READY thread */
     int next = current_thread;
+
     for (int i = 0; i < THREAD_MAX; i++) {
         next = (next + 1) % THREAD_MAX;
+
         if (threads[next].state == THREAD_READY)
             break;
     }
+
     if (next == current_thread) {
-        /* No switch needed, return current ESP */
+        /* Staying put. The block above already marked this thread READY on its
+         * way in, so it has to be marked RUNNING again: leave it READY and the
+         * next tick will skip saving its ESP, because it only saves threads
+         * that say RUNNING. The switch back then happens with a stale stack
+         * pointer and the iret lands in the weeds. */
+        threads[current_thread].state = THREAD_RUNNING;
         return old_esp;
     }
 
-    /* Switch to next thread */
     current_thread = next;
     threads[next].state = THREAD_RUNNING;
 
@@ -101,4 +134,32 @@ uint32_t thread_scheduler(uint32_t old_esp) {
 
 int thread_current(void) {
     return current_thread;
+}
+
+int thread_active_count(void) {
+    int count = 0;
+
+    for (int i = 0; i < THREAD_MAX; i++) {
+        if (threads[i].state != THREAD_UNUSED)
+            count++;
+    }
+
+    return count;
+}
+
+const thread_t* thread_get(int index) {
+    if (index < 0 || index >= THREAD_MAX)
+        return 0;
+
+    return &threads[index];
+}
+
+const char* thread_state_name(uint32_t state) {
+    switch (state) {
+        case THREAD_UNUSED:  return "unused";
+        case THREAD_READY:   return "ready";
+        case THREAD_RUNNING: return "running";
+        case THREAD_DEAD:    return "dead";
+        default:             return "?";
+    }
 }

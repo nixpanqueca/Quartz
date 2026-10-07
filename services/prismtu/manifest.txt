@@ -1,0 +1,4 @@
+name=PrismT
+version=1.0
+type=service
+path=/system/compiled/prismtu/prismtu

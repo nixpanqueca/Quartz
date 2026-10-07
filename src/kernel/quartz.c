@@ -1,63 +1,81 @@
 /* Cubic System Software - Quartz Kernel */
 
 #include "quartz.h"
-#include "framebuffer.h"
-#include "openfirmware.h"
-#include "keyboard.h"
-#include "prism.h"
-#include "mouse.h"
+#include "console.h"
 #include "fs.h"
+#include "interrupt.h"
+#include "keyboard.h"
+#include "mem.h"
+#include "multiboot.h"
+#include "openfirmware.h"
+#include "rtc.h"
 #include "service.h"
+#include "shell.h"
 #include "thread.h"
+#include "timer.h"
 
 // Code by NixPanqueca -w-
 
+/* Still the crash path the Prism build used, kept so the parked prism.c
+ * keeps compiling. The screen behind it is MacCrash(). */
+__attribute__((noreturn))
 void kernel_crash(uint32_t crashcode) {
-    MacCrash(crashcode);
+    MacCrash("kernel_crash() was called", crashcode, 0);
 }
 
 void quartz_main(uint32_t mb_magic, uint32_t mb_info_addr) {
-    int fb_ok = framebuffer_init(mb_magic, mb_info_addr);
+    /* console_init() puts the card into 80x25 text mode before this, so from here on
+ * everything reaches both the screen and the serial mirror. */
+console_init();
+
+    console_printf("%s %s - a text mode kernel\n", QUARTZ_NAME, QUARTZ_VERSION);
+    console_printf("built %s %s\n", QUARTZ_BUILD_DATE, QUARTZ_BUILD_TIME);
+
+    if (mb_magic != MULTIBOOT_MAGIC)
+        MacCrash("bad multiboot magic, is GRUB booting us with 'multiboot'?",
+                 mb_magic, 0);
+
+    if (mb_info_addr == 0)
+        MacCrash("multiboot gave us a null info pointer", 0, 0);
+
+    const multiboot_info_t* mb = (const multiboot_info_t*)(uintptr_t)mb_info_addr;
+
+    console_printf("[boot] multiboot flags 0x%08x", mb->flags);
+
+    if (mb->flags & MB_CMDLINE)
+        console_printf(", cmdline \"%s\"", (const char*)(uintptr_t)mb->cmdline);
+
+    console_putc('\n');
+
+    mem_init(mb_info_addr);
+    if (mb->flags & MB_MEMINFO)
+        console_printf("[boot] %u KB reported, %u MB usable, %d map entries\n",
+                       mem_total_kb(), mem_available_mb(), mem_region_count());
 
     fs_init(mb_info_addr);
+    rtc_init();
 
-    if (fb_ok) {
-        fb_clear(255, 255, 255);
-        OFinit();
-        mouse_init();
-    }
-
+    /* IDT and PIC first, but interrupts stay masked until every driver is
+     * ready: a timer tick before timer_init() would divide by nothing. */
+    interrupt_init();
+    timer_init();
+    keyboard_init();
     thread_init();
 
-    // boot background
-    FB_drawrect(0,0, screen_width, screen_height, 0x009999cb);
+    interrupts_enable();
 
-    /* Welcome to Cubic */
-    uint32_t w = screen_width;
-    uint32_t h = screen_height;
-    // outer window
-    FB_drawrect(w/7, h/6-32, w*6/7, h*3/4, 0x00000000);
-    FB_drawrect(w/7+1, h/6+1-32, w*6/7-1, h*3/4-1, 0x00DDDDDD);
-    // inner window
-    FB_drawrect(w/7+40, h/6, w*6/7-40, h*3/4-88, 0x00000000);
-    FB_drawrect(w/7+41, h/6+1, w*6/7-41, h*3/4-89, 0x00B2B2B2);
-    FB_drawrect(w/7+42, h/6+2, w*6/7-41, h*3/4-89, 0x00FFFFFF);
-    FB_write(w/2 - 14*8/2, h/2 - 8+95, "Starting Up...", 0x00000000, 1);
+    console_printf("[boot] timer armed at %u Hz, keyboard live\n", (uint32_t)TIMER_HZ);
 
-    /* Boot delay - update cursor periodically so mouse moves */
-    for (uint32_t i = 0; i < 20; i++) {
-        fb_cursor_update();
-        delay(100);
-    }
+    /* Banner plus the o+f chord. Runs on the timer, so it sits after
+     * interrupts_enable(). */
+    OFinit();
 
-    PrismInit();
-    service_run_on("/system/compiled/prism/prism.service", 2);
-    fb_cursor_invalidate();
+    console_printf("[boot] handing over to the shell\n");
 
-    while (1) {
-        asm volatile("cli");
-        fb_cursor_update();
-        asm volatile("sti");
-        delay(1);
-    }
+    console_clear();
+    shell_init();
+    shell_run();
+
+    /* shell_run() never returns. */
+    MacCrash("the shell returned, which should be impossible", 0, 0);
 }

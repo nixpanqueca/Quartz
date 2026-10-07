@@ -42,4 +42,6 @@ int service_run_on(const char* path, int thread_id);
 int service_stop(const char* path);
 int service_call(const char* path, const char* func_name);
 
+const char* service_type_name(uint32_t type);
+
 #endif

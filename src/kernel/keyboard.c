@@ -1,232 +1,312 @@
+/* Cubic System Software - PS/2 Keyboard */
+/* The old driver kept a single scancode byte that had to be polled by hand, so
+ * two keys pressed between two polls turned into one. This one has a queue. */
+
 #include "keyboard.h"
-#include <stdint.h>
+#include "io.h"
 
-typedef struct {
-    uint16_t base_low;
-    uint16_t selector;
-    uint8_t  zero;
-    uint8_t  flags;
-    uint16_t base_high;
-} __attribute__((packed)) idt_entry_t;
+/* Scancode set 1, make codes. Break codes are the same value with bit 7 set. */
+static const uint8_t keymap_lower[128] = {
+    [0x01] = KEY_ESCAPE,
 
-typedef struct {
-    uint16_t limit;
-    uint32_t base;
-} __attribute__((packed)) idt_ptr_t;
+    [0x02] = '1',  [0x03] = '2',  [0x04] = '3',  [0x05] = '4',
+    [0x06] = '5',  [0x07] = '6',  [0x08] = '7',  [0x09] = '8',
+    [0x0A] = '9',  [0x0B] = '0',  [0x0C] = '-',  [0x0D] = '=',
+    [0x0E] = KEY_BACKSPACE,
+    [0x0F] = KEY_TAB,
 
-static idt_entry_t idt[256];
-static idt_ptr_t idtp;
+    [0x10] = 'q',  [0x11] = 'w',  [0x12] = 'e',  [0x13] = 'r',
+    [0x14] = 't',  [0x15] = 'y',  [0x16] = 'u',  [0x17] = 'i',
+    [0x18] = 'o',  [0x19] = 'p',  [0x1A] = '[',  [0x1B] = ']',
+    [0x1C] = KEY_ENTER,
 
-static uint8_t key_states[256];
-static uint8_t extended_scan = 0;
+    [0x1E] = 'a',  [0x1F] = 's',  [0x20] = 'd',  [0x21] = 'f',
+    [0x22] = 'g',  [0x23] = 'h',  [0x24] = 'j',  [0x25] = 'k',
+    [0x26] = 'l',  [0x27] = ';',  [0x28] = '\'', [0x29] = '`',
 
-extern volatile uint8_t g_scancode;
+    [0x2B] = '\\',
+    [0x2C] = 'z',  [0x2D] = 'x',  [0x2E] = 'c',  [0x2F] = 'v',
+    [0x30] = 'b',  [0x31] = 'n',  [0x32] = 'm',  [0x33] = ',',
+    [0x34] = '.',  [0x35] = '/',
 
-static const uint8_t scancode_table[128] = {
-    KEY_NONE, KEY_ESC,
-    '1','2','3','4','5','6','7','8','9','0','-','=', KEY_BACKSPACE,
-    KEY_TAB,
-    'q','w','e','r','t','y','u','i','o','p','[',']', KEY_ENTER,
-    KEY_LCTRL,
-    'a','s','d','f','g','h','j','k','l',';','\'','`',
-    KEY_LSHIFT,
-    '\\','z','x','c','v','b','n','m',',','.','/',
-    KEY_RSHIFT,
-    '*',
-    KEY_LALT,
-    ' ',
-    KEY_CAPS,
-    KEY_F1,KEY_F2,KEY_F3,KEY_F4,KEY_F5,KEY_F6,KEY_F7,KEY_F8,KEY_F9,KEY_F10,
-    KEY_NONE, KEY_NONE,
-    '7','8','9','-','4','5','6','+','1','2','3','0','.',
-    KEY_NONE,KEY_NONE,KEY_F11,KEY_F12
+    [0x37] = '*',                  /* keypad multiply */
+    [0x39] = ' ',
+
+    [0x3B] = KEY_F1,  [0x3C] = KEY_F2,  [0x3D] = KEY_F3,  [0x3E] = KEY_F4,
+    [0x3F] = KEY_F5,  [0x40] = KEY_F6,  [0x41] = KEY_F7,  [0x42] = KEY_F8,
+    [0x43] = KEY_F9,  [0x44] = KEY_F10,
+    [0x54] = KEY_F11, [0x55] = KEY_F12,
+
+    /* numeric keypad */
+    [0x47] = '7', [0x48] = '8', [0x49] = '9', [0x4A] = '-',
+    [0x4B] = '4', [0x4C] = '5', [0x4D] = '6', [0x4E] = '+',
+    [0x4F] = '1', [0x50] = '2', [0x51] = '3', [0x52] = '0',
+    [0x53] = '.'
 };
 
-static const uint8_t extended_table[128] = {
-    [0x48] = KEY_UP,
-    [0x50] = KEY_DOWN,
-    [0x4B] = KEY_LEFT,
-    [0x4D] = KEY_RIGHT,
-    [0x47] = KEY_HOME,
-    [0x4F] = KEY_END,
-    [0x49] = KEY_PAGEUP,
-    [0x51] = KEY_PAGEDOWN,
-    [0x52] = KEY_INSERT,
-    [0x53] = KEY_DELETE,
-    [0x5B] = KEY_SUPER,
+/* Only punctuation differs from keymap_lower; letters are handled by flipping
+ * case afterwards, and caps lock then flips them again. */
+static const uint8_t keymap_shifted[128] = {
+    [0x02] = '!',  [0x03] = '@',  [0x04] = '#',  [0x05] = '$',
+    [0x06] = '%',  [0x07] = '^',  [0x08] = '&',  [0x09] = '*',
+    [0x0A] = '(',  [0x0B] = ')',  [0x0C] = '_',  [0x0D] = '+',
+    [0x1A] = '{',  [0x1B] = '}',
+    [0x27] = ':',  [0x28] = '"',  [0x29] = '~',
+    [0x2B] = '|',
+    [0x33] = '<',  [0x34] = '>',  [0x35] = '?',
+    [0x37] = '+'
 };
 
-static void outb(uint16_t port, uint8_t val) {
-    __asm__ __volatile__("outb %0, %1" : : "a"(val), "Nd"(port));
+#define QUEUE_SIZE     64
+#define REPEAT_DELAY   50      /* ticks before the first repeat (0.5s) */
+#define REPEAT_RATE     3      /* ticks between repeats (30ms)  */
+
+static keyboard_event_t queue[QUEUE_SIZE];
+static volatile int queue_head = 0;
+static volatile int queue_tail = 0;
+
+static int shift_down = 0;
+static int ctrl_down = 0;
+static int alt_down = 0;
+static int caps_lock = 0;
+
+static int extended_pending = 0;
+static int pause_remaining = 0;
+
+static uint8_t  repeat_code = KEY_NONE;
+static uint32_t repeat_ticks = 0;
+static int      repeat_started = 0;
+
+/* Last raw byte off port 0x60, handy when watching things over the serial line. */
+volatile uint8_t g_scancode = 0;
+
+static uint8_t modifier_flags(void) {
+    uint8_t flags = 0;
+
+    if (ctrl_down)  flags |= KBD_FLAG_CTRL;
+    if (shift_down) flags |= KBD_FLAG_SHIFT;
+    if (alt_down)   flags |= KBD_FLAG_ALT;
+
+    return flags;
 }
 
-static uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ __volatile__("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
+static void queue_push(uint8_t code, uint8_t flags) {
+    int next = (queue_head + 1) % QUEUE_SIZE;
+
+    if (next == queue_tail)
+        return;                     /* full: drop the keystroke rather than lie */
+
+    queue[queue_head].code = code;
+    queue[queue_head].flags = flags;
+    queue_head = next;
 }
 
-static void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
-    idt[num].base_low = base & 0xFFFF;
-    idt[num].base_high = (base >> 16) & 0xFFFF;
-    idt[num].selector = sel;
-    idt[num].zero = 0;
-    idt[num].flags = flags;
+static uint8_t translate(uint8_t index, int shift) {
+    uint8_t code = keymap_lower[index];
+
+    if (code == KEY_NONE)
+        return KEY_NONE;
+
+    if (code >= 'A' && code <= 'Z')
+        code = (uint8_t)(code + 32);        /* normalise to lowercase */
+
+    if (shift) {
+        uint8_t shifted = keymap_shifted[index];
+
+        if (shifted != KEY_NONE)
+            code = shifted;
+        else if (code >= 'a' && code <= 'z')
+            code = (uint8_t)(code - 32);
+    }
+
+    /* Applied after shift so that caps lock plus shift gives you lowercase,
+     * the way a real keyboard does. */
+    if (caps_lock) {
+        if (code >= 'a' && code <= 'z')
+            code = (uint8_t)(code - 32);
+        else if (code >= 'A' && code <= 'Z')
+            code = (uint8_t)(code + 32);
+    }
+
+    return code;
 }
 
-static void pic_remap(void) {
-    outb(0x20, 0x11); outb(0xA0, 0x11);
-    outb(0x21, 0x20); outb(0xA1, 0x28);
-    outb(0x21, 0x04); outb(0xA1, 0x02);
-    outb(0x21, 0x01); outb(0xA1, 0x01);
-    outb(0x21, 0xFF); outb(0xA1, 0xFF);
-}
-
-static void dbg(char c) {
-    while (!(inb(0x3F8 + 5) & 0x20));
-    outb(0x3F8, c);
-}
-
-static void dbg_hex(uint32_t val) {
-    int i;
-    for (i = 28; i >= 0; i -= 4) {
-        uint8_t nibble = (val >> i) & 0xF;
-        dbg(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
+static uint8_t extended_translate(uint8_t scancode) {
+    switch (scancode) {
+        case 0x48: return KEY_UP;
+        case 0x50: return KEY_DOWN;
+        case 0x4B: return KEY_LEFT;
+        case 0x4D: return KEY_RIGHT;
+        case 0x47: return KEY_HOME;
+        case 0x4F: return KEY_END;
+        case 0x49: return KEY_PAGEUP;
+        case 0x51: return KEY_PAGEDOWN;
+        case 0x52: return KEY_INSERT;
+        case 0x53: return KEY_DELETE;
+        case 0x1C: return KEY_ENTER;       /* keypad enter */
+        case 0x35: return '/';             /* keypad slash */
+        default:   return KEY_NONE;
     }
 }
 
-extern void isr0(void), isr1(void), isr2(void), isr3(void), isr4(void),
-            isr5(void), isr6(void), isr7(void), isr8(void), isr9(void),
-            isr10(void), isr11(void), isr12(void), isr13(void), isr14(void),
-            isr15(void), isr16(void), isr17(void), isr18(void), isr19(void),
-            isr20(void), isr21(void), isr22(void), isr23(void), isr24(void),
-            isr25(void), isr26(void), isr27(void), isr28(void), isr29(void),
-            isr30(void), isr31(void), isr32(void), isr33(void),
-            isr34(void), isr35(void), isr36(void), isr37(void), isr38(void), isr39(void),
-            isr44(void);
+void keyboard_irq(void) {
+    uint8_t scancode = inb(0x60);
 
-void keyboard_init(void) {
-    uint16_t cs_val;
-    uint16_t sel;
-    int i;
+    g_scancode = scancode;
 
-    __asm__ __volatile__("mov %%cs, %0" : "=r"(cs_val));
-    sel = cs_val;
-
-    idtp.limit = sizeof(idt) - 1;
-    idtp.base = (uint32_t)&idt;
-    for (i = 0; i < 256; i++) {
-        idt_set_gate(i, 0, sel, 0);
-    }
-
-    pic_remap();
-
-    for (i = 0; i < 32; i++) {
-        uint32_t addr;
-        switch(i) {
-            case 0: addr = (uint32_t)isr0; break;
-            case 1: addr = (uint32_t)isr1; break;
-            case 2: addr = (uint32_t)isr2; break;
-            case 3: addr = (uint32_t)isr3; break;
-            case 4: addr = (uint32_t)isr4; break;
-            case 5: addr = (uint32_t)isr5; break;
-            case 6: addr = (uint32_t)isr6; break;
-            case 7: addr = (uint32_t)isr7; break;
-            case 8: addr = (uint32_t)isr8; break;
-            case 9: addr = (uint32_t)isr9; break;
-            case 10: addr = (uint32_t)isr10; break;
-            case 11: addr = (uint32_t)isr11; break;
-            case 12: addr = (uint32_t)isr12; break;
-            case 13: addr = (uint32_t)isr13; break;
-            case 14: addr = (uint32_t)isr14; break;
-            case 15: addr = (uint32_t)isr15; break;
-            case 16: addr = (uint32_t)isr16; break;
-            case 17: addr = (uint32_t)isr17; break;
-            case 18: addr = (uint32_t)isr18; break;
-            case 19: addr = (uint32_t)isr19; break;
-            case 20: addr = (uint32_t)isr20; break;
-            case 21: addr = (uint32_t)isr21; break;
-            case 22: addr = (uint32_t)isr22; break;
-            case 23: addr = (uint32_t)isr23; break;
-            case 24: addr = (uint32_t)isr24; break;
-            case 25: addr = (uint32_t)isr25; break;
-            case 26: addr = (uint32_t)isr26; break;
-            case 27: addr = (uint32_t)isr27; break;
-            case 28: addr = (uint32_t)isr28; break;
-            case 29: addr = (uint32_t)isr29; break;
-            case 30: addr = (uint32_t)isr30; break;
-            case 31: addr = (uint32_t)isr31; break;
-        }
-        idt_set_gate(i, addr, sel, 0x8F);
-    }
-
-    idt_set_gate(32, (uint32_t)isr32, sel, 0x8E);
-    idt_set_gate(33, (uint32_t)isr33, sel, 0x8E);
-    idt_set_gate(34, (uint32_t)isr34, sel, 0x8E);
-    idt_set_gate(35, (uint32_t)isr35, sel, 0x8E);
-    idt_set_gate(36, (uint32_t)isr36, sel, 0x8E);
-    idt_set_gate(37, (uint32_t)isr37, sel, 0x8E);
-    idt_set_gate(38, (uint32_t)isr38, sel, 0x8E);
-    idt_set_gate(39, (uint32_t)isr39, sel, 0x8E);
-    idt_set_gate(44, (uint32_t)isr44, sel, 0x8E);
-
-    __asm__ __volatile__("cli\n\t"
-                         "lidt (%0)\n\t"
-                         : : "r"(&idtp)
-                         : "memory");
-
-    uint8_t mask = inb(0x21);
-    mask &= ~(1 << 0); /* unmask IRQ0 (PIT timer) */
-    mask &= ~(1 << 1); /* unmask IRQ1 (keyboard) */
-    mask &= ~(1 << 2); /* unmask IRQ2 (cascade) */
-    outb(0x21, mask);
-
-    uint8_t slave_mask = inb(0xA1);
-    slave_mask &= ~(1 << 4);
-    outb(0xA1, slave_mask);
-
-    for (i = 0; i < 256; i++) key_states[i] = 0;
-
-    /* PIT channel 0: ~100Hz timer (1193182 / 11932 = ~100Hz) */
-    outb(0x43, 0x36);           /* channel 0, lobyte/hibyte, rate generator */
-    outb(0x40, 0x34);           /* divisor low byte (11932 = 0x2E94) */
-    outb(0x40, 0x2E);           /* divisor high byte */
-
-    __asm__ __volatile__("sti");
-}
-
-void keyboard_poll(void) {
-    uint8_t sc = g_scancode;
-    if (sc == 0) return;
-    g_scancode = 0;
-
-    if (sc == 0xE0) {
-        extended_scan = 1;
+    if (scancode == 0xE0) {
+        extended_pending = 1;
         return;
     }
 
-    uint8_t key_code = KEY_NONE;
-
-    if (extended_scan) {
-        extended_scan = 0;
-        if (sc < 128) {
-            key_code = extended_table[sc];
-        }
-    } else {
-        if (sc < 128) {
-            key_code = scancode_table[sc];
-        }
+    if (scancode == 0xE1) {
+        pause_remaining = 5;               /* the rest of the pause sequence */
+        return;
     }
 
-    if (key_code != KEY_NONE) {
-        if (sc & 0x80) {
-            key_states[key_code] = 0;
-        } else {
-            key_states[key_code] = 1;
+    if (pause_remaining > 0) {
+        pause_remaining--;
+        return;
+    }
+
+    if (extended_pending) {
+        extended_pending = 0;
+
+        if (scancode & 0x80) {
+            uint8_t index = (uint8_t)(scancode & 0x7F);
+
+            if (index == 0x1D) ctrl_down = 0;       /* right ctrl */
+            if (index == 0x38) alt_down = 0;        /* right alt  */
+            return;
         }
+
+        uint8_t code = extended_translate(scancode);
+
+        if (code != KEY_NONE) {
+            if (code >= 'a' && code <= 'z')
+                code = (uint8_t)(code - 32);
+
+            queue_push(code, modifier_flags());
+        }
+        return;
+    }
+
+    int make = (scancode & 0x80) == 0;
+    uint8_t index = (uint8_t)(scancode & 0x7F);
+
+    switch (index) {
+        case 0x2A:
+        case 0x36:                             /* left and right shift */
+            shift_down = make;
+            return;
+
+        case 0x1D:
+            ctrl_down = make;
+            return;
+
+        case 0x38:
+            alt_down = make;
+            return;
+
+        case 0x3A:
+            if (make)
+                caps_lock = !caps_lock;
+            return;
+
+        default:
+            break;
+    }
+
+    if (!make) {
+        /* Any release stops auto-repeat. Tracking which key was held would
+         * cost more than it is worth for a shell. */
+        repeat_code = KEY_NONE;
+        return;
+    }
+
+    uint8_t code = translate(index, shift_down);
+
+    if (code == KEY_NONE)
+        return;
+
+    queue_push(code, modifier_flags());
+
+    if (code >= 0x20) {                       /* auto-repeat printable keys */
+        repeat_code = code;
+        repeat_ticks = 0;
+        repeat_started = 0;
+    } else {
+        repeat_code = KEY_NONE;
     }
 }
 
-int keyboard_key_pressed(uint8_t key) {
-    return key_states[key];
+void keyboard_tick(void) {
+    if (repeat_code == KEY_NONE)
+        return;
+
+    repeat_ticks++;
+
+    uint32_t limit = repeat_started ? REPEAT_RATE : REPEAT_DELAY;
+
+    if (repeat_ticks < limit)
+        return;
+
+    repeat_ticks = 0;
+    repeat_started = 1;
+
+    queue_push(repeat_code, modifier_flags() | KBD_FLAG_REPEAT);
+}
+
+int keyboard_get_event(keyboard_event_t* event) {
+    if (queue_tail == queue_head)
+        return 0;
+
+    if (event) {
+        event->code = queue[queue_tail].code;
+        event->flags = queue[queue_tail].flags;
+    }
+
+    queue_tail = (queue_tail + 1) % QUEUE_SIZE;
+
+    return 1;
+}
+
+int keyboard_wait_event(keyboard_event_t* event) {
+    for (;;) {
+        if (keyboard_get_event(event))
+            return 1;
+
+        __asm__ __volatile__("sti; hlt");
+    }
+}
+
+void keyboard_flush(void) {
+    queue_head = queue_tail;
+    repeat_code = KEY_NONE;
+}
+
+int keyboard_shift_held(void) {
+    return shift_down;
+}
+
+int keyboard_caps_lock(void) {
+    return caps_lock;
+}
+
+void keyboard_init(void) {
+    queue_head = queue_tail = 0;
+    extended_pending = 0;
+    pause_remaining = 0;
+    shift_down = 0;
+    ctrl_down = 0;
+    alt_down = 0;
+    caps_lock = 0;
+    repeat_code = KEY_NONE;
+    repeat_ticks = 0;
+    repeat_started = 0;
+    g_scancode = 0;
+
+    /* Throw away anything the firmware left sitting in the controller. */
+    while (inb(0x64) & 0x01)
+        (void)inb(0x60);
 }
