@@ -1,0 +1,4 @@
+name=DiskMgr
+version=1.0
+type=app
+path=/system/compiled/utils/diskmgr

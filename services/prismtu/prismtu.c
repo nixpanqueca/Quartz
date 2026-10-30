@@ -1,17 +1,3 @@
-/* Cubic System Software - PrismT Service */
-/* The PrismT user interface itself lives in src/kernel/prismtu.c, linked into
- * the kernel, so the shell, a command and this service all draw the same boxes
- * through the same code.
- *
- * What is left here is only what makes it a service: the registration, the
- * Init and Shutdown the service manager calls, and a function table for `call`.
- * The interface can be built out in prismtu.c without any of it being
- * duplicated here.
- *
- * The graphical Prism is untouched at services/prism/ and src/kernel/prism.c, for
- * when the framebuffer comes back.
- */
-
 // Code by NixPanqueca -w-
 
 #include "quartz.h"
@@ -76,13 +62,13 @@ static service_func_t prismtu_funcs[] = {
     { 0, 0 }
 };
 
-void Init(void) {
+static void Init(void) {
     running = 1;
     console_write("[prismtu] Init\n");
     prismtu_menubar();
 }
 
-void Shutdown(void) {
+static void Shutdown(void) {
     running = 0;
     console_write("[prismtu] Shutdown\n");
 }

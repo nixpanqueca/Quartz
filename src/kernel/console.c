@@ -369,7 +369,7 @@ void console_get_color(uint8_t* fg, uint8_t* bg) {
  * decimal width. Length modifiers are accepted and ignored: this is a 32-bit
  * target, so %lu reads a 32-bit long just like %u. */
 
-static void put_unsigned(uint32_t value, uint32_t radix, int upper,
+static void put_unsigned(unsigned long long value, uint32_t radix, int upper,
                          int width, int zero_pad, int left_align) {
     static const char lower_digits[] = "0123456789abcdef";
     static const char upper_digits[] = "0123456789ABCDEF";
@@ -451,10 +451,14 @@ static void vconsole_printf(const char* fmt, __builtin_va_list args) {
             i++;
         }
 
-        /* Accept and ignore l/h/z/j/t/L: everything here is 32 bits wide. */
+        /* Count the `l` length modifiers so %llu/%lu can pull the right width. */
+        int long_count = 0;
         while (fmt[i] == 'l' || fmt[i] == 'h' || fmt[i] == 'z' ||
-               fmt[i] == 'j' || fmt[i] == 't' || fmt[i] == 'L')
+               fmt[i] == 'j' || fmt[i] == 't' || fmt[i] == 'L') {
+            if (fmt[i] == 'l')
+                long_count++;
             i++;
+        }
 
         char spec = fmt[i];
         if (!spec)
@@ -472,35 +476,63 @@ static void vconsole_printf(const char* fmt, __builtin_va_list args) {
 
             case 'd':
             case 'i': {
-                int value = __builtin_va_arg(args, int);
-                uint32_t magnitude;
-                int negative = value < 0;
+                if (long_count >= 2) {
+                    long long value = __builtin_va_arg(args, long long);
+                    unsigned long long magnitude;
+                    int negative = value < 0;
 
-                if (negative)
-                    magnitude = (uint32_t)0 - (uint32_t)value;
-                else
-                    magnitude = (uint32_t)value;
+                    if (negative)
+                        magnitude = (unsigned long long)0 - (unsigned long long)value;
+                    else
+                        magnitude = (unsigned long long)value;
 
-                if (negative && !zero_pad)
-                    console_putc('-');
+                    if (negative && !zero_pad)
+                        console_putc('-');
 
-                put_unsigned(magnitude, 10, 0, width, zero_pad, left_align);
+                    put_unsigned(magnitude, 10, 0, width, zero_pad, left_align);
+                } else {
+                    int value = __builtin_va_arg(args, int);
+                    unsigned int magnitude;
+                    int negative = value < 0;
+
+                    if (negative)
+                        magnitude = (unsigned int)0 - (unsigned int)value;
+                    else
+                        magnitude = (unsigned int)value;
+
+                    if (negative && !zero_pad)
+                        console_putc('-');
+
+                    put_unsigned(magnitude, 10, 0, width, zero_pad, left_align);
+                }
                 break;
             }
 
             case 'u':
-                put_unsigned(__builtin_va_arg(args, unsigned int), 10, 0,
-                             width, zero_pad, left_align);
+                if (long_count >= 2)
+                    put_unsigned(__builtin_va_arg(args, unsigned long long), 10, 0,
+                                 width, zero_pad, left_align);
+                else
+                    put_unsigned(__builtin_va_arg(args, unsigned int), 10, 0,
+                                 width, zero_pad, left_align);
                 break;
 
             case 'x':
-                put_unsigned(__builtin_va_arg(args, unsigned int), 16, 0,
-                             width, zero_pad, left_align);
+                if (long_count >= 2)
+                    put_unsigned(__builtin_va_arg(args, unsigned long long), 16, 0,
+                                 width, zero_pad, left_align);
+                else
+                    put_unsigned(__builtin_va_arg(args, unsigned int), 16, 0,
+                                 width, zero_pad, left_align);
                 break;
 
             case 'X':
-                put_unsigned(__builtin_va_arg(args, unsigned int), 16, 1,
-                             width, zero_pad, left_align);
+                if (long_count >= 2)
+                    put_unsigned(__builtin_va_arg(args, unsigned long long), 16, 1,
+                                 width, zero_pad, left_align);
+                else
+                    put_unsigned(__builtin_va_arg(args, unsigned int), 16, 1,
+                                 width, zero_pad, left_align);
                 break;
 
             case 'p':

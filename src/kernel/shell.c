@@ -4,6 +4,7 @@
 
 #include "shell.h"
 #include "console.h"
+#include "disk.h"
 #include "fs.h"
 #include "io.h"
 #include "keyboard.h"
@@ -279,6 +280,7 @@ static void cmd_stop(int argc, char** argv);
 static void cmd_call(int argc, char** argv);
 static void cmd_crash(int argc, char** argv);
 static void cmd_dither(int argc, char** argv);
+static void cmd_disks(int argc, char** argv);
 static void cmd_reboot(int argc, char** argv);
 
 static const shell_command_t commands[] = {
@@ -295,12 +297,13 @@ static const shell_command_t commands[] = {
     { "cat",      "cat <file>, hex dump a module",         cmd_cat },
     { "threads",  "list scheduler threads",                cmd_threads },
     { "services", "list registered services",              cmd_services },
-    { "start",    "start <name>, launch a .service",       cmd_start },
+    { "start",    "start <name>, launch a .service or .app", cmd_start },
     { "run",      "run <path>, start a service",           cmd_run },
     { "stop",     "stop <path>, shut a service down",      cmd_stop },
     { "call",     "call <path> <func>, call one function", cmd_call },
     { "crash",    "crash [code], panic on purpose",        cmd_crash },
     { "dither",   "dither [on|off|invert], cell pattern",  cmd_dither },
+    { "disks",    "list ATA disks and partitions",          cmd_disks },
     { "reboot",   "reset the machine",                     cmd_reboot },
     { 0, 0, 0 }
 };
@@ -717,21 +720,44 @@ static void cmd_services(int argc, char** argv) {
  * the kernel and registered under that same path. Finding the file but finding no
  * registration means the service was put on the disk without being built, which
  * is a different problem and is reported as such. */
+static int ends_with(const char* text, const char* suffix) {
+    int text_length = str_length(text);
+    int suffix_length = str_length(suffix);
+
+    if (suffix_length > text_length)
+        return 0;
+
+    return str_equal(text + text_length - suffix_length, suffix);
+}
+
 static void cmd_start(int argc, char** argv) {
     if (argc < 2) {
         console_write("usage: start <name>\n");
         return;
     }
 
-    /* The disk file is <name>.service. */
+    /* The disk file is <name>.service or <name>.app. A name that already
+     * carries one of those extensions is used as-is, so `start foo.app`
+     * works too. */
+    const char* extensions[2] = { ".service", ".app" };
     char file[64];
-    str_copy(file, argv[1], sizeof(file) - 9);
-    str_copy(file + str_length(file), ".service", sizeof(file) - str_length(file));
+    const fs_file_t* found = 0;
 
-    const fs_file_t* found = fs_find_basename(file);
+    if (ends_with(argv[1], ".service") || ends_with(argv[1], ".app")) {
+        str_copy(file, argv[1], sizeof(file));
+        found = fs_find_basename(file);
+    } else {
+        for (int i = 0; i < 2 && !found; i++) {
+            str_copy(file, argv[1], sizeof(file) - 9);
+            str_copy(file + str_length(file), extensions[i],
+                     sizeof(file) - str_length(file));
+            found = fs_find_basename(file);
+        }
+    }
 
     if (!found) {
-        console_printf("start: no %s anywhere on the disk\n", file);
+        console_printf("start: no %s.service or %s.app anywhere on the disk\n",
+                       argv[1], argv[1]);
         return;
     }
 
@@ -813,6 +839,14 @@ static void cmd_crash(int argc, char** argv) {
     console_printf("crash: about to panic with code 0x%08x\n", code);
 
     MacCrash("crash command from the shell", code, 0);
+}
+
+
+static void cmd_disks(int argc, char** argv) {
+    (void)argc;
+    (void)argv;
+
+    disk_list();
 }
 
 static void cmd_reboot(int argc, char** argv) {

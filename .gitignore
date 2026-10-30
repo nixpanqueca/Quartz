@@ -5,3 +5,5 @@ build/
 # The Prism one is tracked on purpose: it is the record of what the graphical
 # build shipped on the boot disk.
 disk/system/compiled/prismtu/
+# Disk mirror generated from services/diskmgr/manifest.txt.
+disk/system/compiled/utils/

@@ -17,6 +17,7 @@ CFLAGS = -ffreestanding -O2 -Wall -Wextra -nostdlib -nostdinc \
          -fno-pic -fno-pie -mpreferred-stack-boundary=2
 ASFLAGS = -f elf32
 LDFLAGS = -T linker.ld -nostdlib
+LIBGCC = $(shell $(CC) -print-libgcc-file-name)
 
 BUILD_DIR = build
 KERNEL = $(BUILD_DIR)/quartz.elf
@@ -56,6 +57,7 @@ KERNEL_OBJS = $(BUILD_DIR)/boot.o $(BUILD_DIR)/isr.o \
               $(BUILD_DIR)/interrupt.o $(BUILD_DIR)/timer.o \
               $(BUILD_DIR)/rtc.o $(BUILD_DIR)/mem.o \
               $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/fs.o \
+              $(BUILD_DIR)/disk.o \
               $(BUILD_DIR)/thread.o $(BUILD_DIR)/service.o \
               $(BUILD_DIR)/openfirmware.o $(BUILD_DIR)/prismtu.o \
               $(BUILD_DIR)/shell.o
@@ -63,10 +65,11 @@ KERNEL_OBJS = $(BUILD_DIR)/boot.o $(BUILD_DIR)/isr.o \
 # services/prism/ is the graphical Prism. It stays on the boot disk as a record
 # and for the framebuffer era, but it cannot be linked into a text kernel, so
 # only the console service is built here.
-SERVICE_OBJS = $(BUILD_DIR)/svc_prismtu/prismtu.o
+SERVICE_OBJS = $(BUILD_DIR)/svc_prismtu/prismtu.o \
+              $(BUILD_DIR)/svc_diskmgr/diskmgr.o
 
 $(KERNEL): $(KERNEL_OBJS) $(SERVICE_OBJS) linker.ld
-	$(LD) $(LDFLAGS) $(KERNEL_OBJS) $(SERVICE_OBJS) -o $@
+	$(LD) $(LDFLAGS) $(KERNEL_OBJS) $(SERVICE_OBJS) $(LIBGCC) -o $@
 
 # Copy service source files to disk/ as .app or .service
 services:

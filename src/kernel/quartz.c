@@ -2,6 +2,7 @@
 
 #include "quartz.h"
 #include "console.h"
+#include "disk.h"
 #include "fs.h"
 #include "interrupt.h"
 #include "keyboard.h"
@@ -9,7 +10,6 @@
 #include "multiboot.h"
 #include "openfirmware.h"
 #include "rtc.h"
-#include "service.h"
 #include "shell.h"
 #include "thread.h"
 #include "timer.h"
@@ -53,6 +53,7 @@ console_init();
                        mem_total_kb(), mem_available_mb(), mem_region_count());
 
     fs_init(mb_info_addr);
+    disk_init();
     rtc_init();
 
     /* IDT and PIC first, but interrupts stay masked until every driver is
